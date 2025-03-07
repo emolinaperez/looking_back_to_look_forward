@@ -36,21 +36,21 @@ dynamics_model <- function(time, state, parameters) {
 
 
 # Initial conditions
-state <- c(Resources = 1.0, Economy = 0.1, Bureaucracy = 0.01, Pollution = 0.001)
+state <- c(Resources = 1.0, Economy = 1, Bureaucracy = 1, Pollution = 1)
 
 # Model parameters
 parameters <- c(
   k_resources =  0.15 , # Autoregeneration rate of resources  
-  ef_economy_resources_on_prod = 1.3,          # Production rate
-  ef_bureaucracy_on_prod = 1.0, # Effect of bureaucracy on production 
-  k_deprec = 0.4,        # Depreciation rate
-  ef_pollution_on_depreciation = 0.5, # Effect of pollution on economy depreciation 
-  k_bureaucracy = 0.95,    # Bureaucracy formation rate
-  ef_economy_on_bureaucracy = 0.9, # Effect of the Economy of bureaucracy formation 
-  k_decay_bureaucracy = 5,          # Bureaucracy decay rate
-  ef_pollution_on_bureaucracy = 49.5, # Effect of pollution on bureaucracy decay  
-  k_pollution = 0.10, #Pollution generation rate 
-  k_pollution_decay = 150 # Pollution decay rate
+  ef_economy_resources_on_prod = .08,          # Production rate
+  ef_bureaucracy_on_prod = 0.02, # Effect of bureaucracy on production 
+  k_deprec = 0.01,        # Depreciation rate
+  ef_pollution_on_depreciation = 0.05, # Effect of pollution on economy depreciation 
+  k_bureaucracy = 0.01,    # Bureaucracy formation rate
+  ef_economy_on_bureaucracy = 0.03, # Effect of the Economy of bureaucracy formation 
+  k_decay_bureaucracy = 0.02,          # Bureaucracy decay rate
+  ef_pollution_on_bureaucracy = 0.02, # Effect of pollution on bureaucracy decay  
+  k_pollution = 0.05, #Pollution generation rate 
+  k_pollution_decay = 0.150 # Pollution decay rate
 )
 
 # Time sequence (note the temporal granuality is required to avoid integration errors with rk4)
