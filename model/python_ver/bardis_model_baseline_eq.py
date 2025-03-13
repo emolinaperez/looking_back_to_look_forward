@@ -23,23 +23,18 @@ def dynamics_model(state, t, params):
     k_pollution = params["k_pollution"]
     k_pollution_decay = params["k_pollution_decay"]
 
-    # Flows
-    # Resources
+    # Compute flows
     resource_inflow = k_resources * Resources
     extractive_pollution = k_pollution * Economy * Resources
-
-    # Economy
     production = ef_economy_resources_on_prod * Resources * Economy + ef_bureaucracy_on_prod * Bureaucracy  
     depreciation = k_deprec * Economy + ef_pollution_on_depreciation * Pollution
     
-    # Bureaucracy
+    # Flows used to compute extra outputs
     bureaucracy_creation = ef_economy_on_bureaucracy * Economy + k_bureaucracy * Bureaucracy
     bureaucracy_decay = k_decay_bureaucracy * Bureaucracy + ef_pollution_on_bureaucracy * Pollution
-
-    # Pollution
     pollution_abatement = k_pollution_decay * Pollution
 
-    # Differential equations (rate of change)
+    # Rate of change for the state variables
     dResources = resource_inflow - production - extractive_pollution
     dEconomy = production - depreciation - bureaucracy_creation
     dBureaucracy = bureaucracy_creation - bureaucracy_decay
@@ -54,7 +49,7 @@ model_dir_path = os.path.join(dir_path, "..")
 project_dir_path = os.path.join(model_dir_path, "..")
 tableu_dir_path = os.path.join(project_dir_path, "tableau")
 
-# Initial conditions (same as in the R script)
+# Initial conditions
 state0 = [1.0, 1.0, 1.0, 1.0]
 
 # Model parameters
@@ -87,8 +82,14 @@ solution = np.round(solution, 2)
 # Convert the solution to a DataFrame
 df = pd.DataFrame(solution, columns=["Resources", "Economy", "Bureaucracy", "Pollution"])
 df["time"] = t
-# Rearranging columns so that time comes first
 df = df[["time", "Resources", "Economy", "Bureaucracy", "Pollution"]]
+
+# Compute the additional columns based on the state variables:
+# "inflow" corresponds to bureaucracy_creation
+df["inflow"] = params["ef_economy_on_bureaucracy"] * df["Economy"] + params["k_bureaucracy"] * df["Bureaucracy"]
+
+# "outflow1" corresponds to bureaucracy_decay
+df["outflow1"] = params["k_decay_bureaucracy"] * df["Bureaucracy"] + params["ef_pollution_on_bureaucracy"] * df["Pollution"]
 
 # Output CSV file path (update the path as needed)
 output_path =  os.path.join(tableu_dir_path, "baseline_python_ver.csv")
