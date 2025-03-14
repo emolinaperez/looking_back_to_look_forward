@@ -2,45 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.integrate import odeint
 import os
-
-
-
-# Define the dynamics model (differential equations)
-def dynamics_model(state, t, params):
-    # Unpack the state variables
-    Resources, Economy, Bureaucracy, Pollution = state
-
-    # Unpack parameters
-    k_resources = params["k_resources"]
-    ef_economy_resources_on_prod = params["ef_economy_resources_on_prod"]
-    ef_bureaucracy_on_prod = params["ef_bureaucracy_on_prod"]
-    k_deprec = params["k_deprec"]
-    ef_pollution_on_depreciation = params["ef_pollution_on_depreciation"]
-    k_bureaucracy = params["k_bureaucracy"]
-    ef_economy_on_bureaucracy = params["ef_economy_on_bureaucracy"]
-    k_decay_bureaucracy = params["k_decay_bureaucracy"]
-    ef_pollution_on_bureaucracy = params["ef_pollution_on_bureaucracy"]
-    k_pollution = params["k_pollution"]
-    k_pollution_decay = params["k_pollution_decay"]
-
-    # Compute flows
-    resource_inflow = k_resources * Resources
-    extractive_pollution = k_pollution * Economy * Resources
-    production = ef_economy_resources_on_prod * Resources * Economy + ef_bureaucracy_on_prod * Bureaucracy  
-    depreciation = k_deprec * Economy + ef_pollution_on_depreciation * Pollution
-    
-    # Flows used to compute extra outputs
-    bureaucracy_creation = ef_economy_on_bureaucracy * Economy + k_bureaucracy * Bureaucracy
-    bureaucracy_decay = k_decay_bureaucracy * Bureaucracy + ef_pollution_on_bureaucracy * Pollution
-    pollution_abatement = k_pollution_decay * Pollution
-
-    # Rate of change for the state variables
-    dResources = resource_inflow - production - extractive_pollution
-    dEconomy = production - depreciation - bureaucracy_creation
-    dBureaucracy = bureaucracy_creation - bureaucracy_decay
-    dPollution = depreciation + bureaucracy_decay + extractive_pollution - pollution_abatement
-
-    return [dResources, dEconomy, dBureaucracy, dPollution]
+from bardis_model import BardisModel
 
 
 # Set up paths
@@ -49,7 +11,10 @@ model_dir_path = os.path.join(dir_path, "..")
 project_dir_path = os.path.join(model_dir_path, "..")
 tableu_dir_path = os.path.join(project_dir_path, "tableau")
 
-# Initial conditions
+# Define the dynamics model
+bm = BardisModel()
+
+# Initial conditions with order "Resources", "Economy", "Bureaucracy", "Pollution"
 state0 = [1.0, 1.0, 1.0, 1.0]
 
 # Model parameters
@@ -74,7 +39,7 @@ t = np.arange(0, 200.01, 0.01)
 t = np.round(t, 2)
 
 # Solve the system of differential equations using odeint
-solution = odeint(dynamics_model, state0, t, args=(params,))
+solution = odeint(bm.run_bardis_model, state0, t, args=(params,))
 
 # Round the solution to 2 decimal places
 solution = np.round(solution, 2)
