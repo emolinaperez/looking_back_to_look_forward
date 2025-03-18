@@ -1,6 +1,14 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import qmc
+from bardis_model import BardisModel
+import pathlib
+import logging
+
+# ---------------------------
+# Set up logging
+# ---------------------------
+logging.basicConfig(level=logging.INFO)
 
 # ---------------------------
 # Define custom Euler integrator
@@ -15,46 +23,19 @@ def euler_integrate(func, y0, t, parameters):
     return y
 
 # ---------------------------
-# Define the bardis_model function
-# (Translated from your previous R function)
+# Create an instance of the BardisModel class
 # ---------------------------
-def bardis_model(state, time, parameters):
-    Resources, Economy, Bureaucracy, Pollution = state
-
-    # Unpack parameters
-    k_resources = parameters["k_resources"]
-    k_pollution = parameters["k_pollution"]
-    ef_economy_resources_on_prod = parameters["ef_economy_resources_on_prod"]
-    ef_bureaucracy_on_prod = parameters["ef_bureaucracy_on_prod"]
-    k_deprec = parameters["k_deprec"]
-    ef_pollution_on_depreciation = parameters["ef_pollution_on_depreciation"]
-    ef_economy_on_bureaucracy = parameters["ef_economy_on_bureaucracy"]
-    k_bureaucracy = parameters["k_bureaucracy"]
-    k_decay_bureaucracy = parameters["k_decay_bureaucracy"]
-    ef_pollution_on_bureaucracy = parameters["ef_pollution_on_bureaucracy"]
-    k_pollution_decay = parameters["k_pollution_decay"]
-
-    # Flows
-    resource_inflow = k_resources * Resources
-    extractive_pollution = k_pollution * Economy * Resources
-    production = ef_economy_resources_on_prod * Resources * Economy + ef_bureaucracy_on_prod * Bureaucracy
-    depreciation = k_deprec * Economy + ef_pollution_on_depreciation * Pollution
-    bureaucracy_creation = ef_economy_on_bureaucracy * Economy + k_bureaucracy * Bureaucracy
-    bureaucracy_decay = k_decay_bureaucracy * Bureaucracy + ef_pollution_on_bureaucracy * Pollution
-    pollution_abatement = k_pollution_decay * Pollution
-
-    # Rate of change with conditional checks (if state > 0, compute derivative; else 0)
-    dResources = resource_inflow - production - extractive_pollution if Resources > 0 else 0
-    dEconomy = production - depreciation - bureaucracy_creation if Economy > 0 else 0
-    dBureaucracy = bureaucracy_creation - bureaucracy_decay if Bureaucracy > 0 else 0
-    dPollution = (depreciation + bureaucracy_decay + extractive_pollution - pollution_abatement) if Pollution > 0 else 0
-
-    return [dResources, dEconomy, dBureaucracy, dPollution]
+bm = BardisModel()
 
 # ---------------------------
 # Set up file paths and initial conditions
 # ---------------------------
-root = "/Users/edmun/Library/CloudStorage/OneDrive-Personal/Edmundo-ITESM/3.Proyectos/63. Looking Back to Look Forward/looking_back_to_look_forward/"
+script_dir = pathlib.Path(__file__).parent.absolute()
+root = script_dir.parent.parent
+tableu_dir = root / "tableau"
+logging.info(f"Root directory: {root}")
+
+
 # (Note: The model file is assumed to be incorporated via the function above)
 
 # Initial conditions for the state variables
@@ -144,7 +125,7 @@ def run_simulation(row):
         "k_pollution_decay": new_params_values[10]
     }
     # Run the simulation using the Euler method
-    sol = euler_integrate(bardis_model, state, t, parameters)
+    sol = euler_integrate(bm.run_bardis_model, state, t, parameters)
     # Convert the solution to a DataFrame
     df_sol = pd.DataFrame(sol, columns=["Resources", "Economy", "Bureaucracy", "Pollution"])
     df_sol["time"] = t
@@ -156,6 +137,7 @@ def run_simulation(row):
 # ---------------------------
 # Run simulations for each experiment
 # ---------------------------
+logging.info("Running simulations...")
 results = []
 for _, row in Exp.iterrows():
     sim_df = run_simulation(row)
@@ -167,11 +149,10 @@ out_all = pd.concat(results, ignore_index=True)
 # ---------------------------
 # Write output CSV files
 # ---------------------------
-ensamble_path = root + "tableau/bardis_ensamble.csv"
-design_path = root + "tableau/exp_design.csv"
+ensamble_path = tableu_dir / "bardis_ensemble_python_ver.csv"
+design_path = tableu_dir / "exp_design_python_ver.csv"
 
 out_all.to_csv(ensamble_path, index=False)
 Exp.to_csv(design_path, index=False)
 
-print(f"Simulation complete. Ensemble saved to: {ensamble_path}")
-print(f"Experimental design saved to: {design_path}")
+logging.info(f"Output files written to {tableu_dir}")
