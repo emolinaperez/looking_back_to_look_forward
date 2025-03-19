@@ -53,8 +53,8 @@ df = df[["time", "Resources", "Economy", "Bureaucracy", "Pollution"]]
 # "inflow" corresponds to bureaucracy_creation
 df["inflow"] = params["ef_economy_on_bureaucracy"] * df["Economy"] + params["k_bureaucracy"] * df["Bureaucracy"]
 
-# "outflow1" corresponds to bureaucracy_decay
-df["outflow1"] = params["k_decay_bureaucracy"] * df["Bureaucracy"] + params["ef_pollution_on_bureaucracy"] * df["Pollution"]
+# "outflow" corresponds to bureaucracy_decay
+df["outflow"] = params["k_decay_bureaucracy"] * df["Bureaucracy"] + params["ef_pollution_on_bureaucracy"] * df["Pollution"]
 
 # Output CSV file path (update the path as needed)
 output_path =  os.path.join(tableu_dir_path, "baseline_python_ver.csv")
