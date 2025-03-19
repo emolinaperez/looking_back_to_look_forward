@@ -28,18 +28,19 @@ def euler_integrate(func, y0, t, parameters):
 bm = BardisModel()
 
 # ---------------------------
-# Set up file paths and initial conditions
+# Set up file paths
 # ---------------------------
 script_dir = pathlib.Path(__file__).parent.absolute()
 root = script_dir.parent.parent
 tableu_dir = root / "tableau"
 logging.info(f"Root directory: {root}")
 
-
-# (Note: The model file is assumed to be incorporated via the function above)
+# ---------------------------
+# Set up initial conditions
+# ---------------------------
 
 # Initial conditions for the state variables
-state = [1.0, 1.0, 1.0, 1.0]
+initial_state = [1.0, 1.0, 1.0, 1.0]
 
 # Dynamic equilibrium parameter vector p_0
 p_0 = {
@@ -58,16 +59,18 @@ p_0 = {
 
 # Time steps and integration method
 t = np.arange(0, 200.01, 0.01)
+
+# Round the time sequence to 2 decimal places
+t = np.round(t, 2)
+
 # Our integration method is "euler" (using our custom Euler integrator)
 
 # ---------------------------
 # Create experimental design using Latin Hypercube Sampling
 # ---------------------------
-sample_size = 100
-n_factors = 11
 
-# Define factor names (with ":X" suffix as in your R code)
-Xs = [
+# Define factor names
+factor_names = [
     'k_resources:X', 
     'ef_economy_resources_on_prod:X', 
     'ef_bureaucracy_on_prod:X', 
@@ -81,19 +84,22 @@ Xs = [
     'k_pollution_decay:X'
 ]
 
+sample_size = 100
+n_factors = len(factor_names)
+
 # Generate LHS in [0,1] and then scale to [0.5, 1.5]
 sampler = qmc.LatinHypercube(d=n_factors, seed=55555)
 sample = sampler.random(n=sample_size)
 scaled_sample = 0.5 + sample * (1.5 - 0.5)
-Exp = pd.DataFrame(scaled_sample, columns=Xs)
-Exp['Run.ID'] = np.arange(1, sample_size + 1)
+exp_df = pd.DataFrame(scaled_sample, columns=factor_names)
+exp_df['run_id'] = np.arange(1, sample_size + 1)
 
 # ---------------------------
 # Function to run simulation for one experimental design row
 # ---------------------------
-def run_simulation(row):
-    # Extract the multipliers in the order of Xs
-    p_x = np.array([row[col] for col in Xs])
+def run_simulation(row, initial_state, factor_names):
+    # Extract the multipliers in the order of the factor names
+    p_x = np.array([row[col] for col in factor_names])
     # Create a numpy array from p_0 in the same order
     p0_values = np.array([
         p_0["k_resources"],
@@ -108,8 +114,10 @@ def run_simulation(row):
         p_0["k_pollution"],
         p_0["k_pollution_decay"]
     ])
+    
     # Compute the new parameter vector by elementwise multiplication
     new_params_values = p0_values * p_x
+    
     # Map back to a dictionary with the correct parameter names for the model
     parameters = {
         "k_resources": new_params_values[0],
@@ -124,14 +132,17 @@ def run_simulation(row):
         "k_pollution": new_params_values[9],
         "k_pollution_decay": new_params_values[10]
     }
+
     # Run the simulation using the Euler method
-    sol = euler_integrate(bm.run_bardis_model, state, t, parameters)
+    sol = euler_integrate(bm.run_bardis_model, initial_state, t, parameters)
+    
     # Convert the solution to a DataFrame
     df_sol = pd.DataFrame(sol, columns=["Resources", "Economy", "Bureaucracy", "Pollution"])
     df_sol["time"] = t
+    
     # Subset: keep every 0.2 time unit (with dt=0.01, every 20th step)
     df_sol = df_sol.iloc[::20, :].reset_index(drop=True)
-    df_sol["Run.ID"] = row["Run.ID"]
+    df_sol["run_id"] = row["run_id"]
     return df_sol
 
 # ---------------------------
@@ -139,9 +150,12 @@ def run_simulation(row):
 # ---------------------------
 logging.info("Running simulations...")
 results = []
-for _, row in Exp.iterrows():
-    sim_df = run_simulation(row)
-    results.append(sim_df)
+for _, row in exp_df.iterrows():
+    try:
+        sim_df = run_simulation(row, initial_state, factor_names)
+        results.append(sim_df)
+    except Exception as e:
+        logging.warning(f"Simulation failed for run_id {row['run_id']}: {e}")
 
 # Combine all simulation outputs
 out_all = pd.concat(results, ignore_index=True)
@@ -153,6 +167,6 @@ ensamble_path = tableu_dir / "bardis_ensemble_python_ver.csv"
 design_path = tableu_dir / "exp_design_python_ver.csv"
 
 out_all.to_csv(ensamble_path, index=False)
-Exp.to_csv(design_path, index=False)
+exp_df.to_csv(design_path, index=False)
 
 logging.info(f"Output files written to {tableu_dir}")
