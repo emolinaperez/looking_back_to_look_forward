@@ -98,6 +98,16 @@ exp_df['run_id'] = np.arange(1, sample_size + 1)
 # Function to run simulation for one experimental design row
 # ---------------------------
 def run_simulation(row, initial_state, factor_names):
+    """
+    Run a simulation using the provided initial state and factor multipliers.
+    Parameters:
+    row (pd.Series): A pandas Series containing the multipliers for each factor.
+    initial_state (list or np.array): The initial state of the system.
+    factor_names (list of str): The names of the factors in the order they appear in the row.
+    Returns:
+    pd.DataFrame: A DataFrame containing the simulation results with columns 
+                  ["Resources", "Economy", "Bureaucracy", "Pollution", "time", "run_id"].
+    """
     # Extract the multipliers in the order of the factor names
     p_x = np.array([row[col] for col in factor_names])
     # Create a numpy array from p_0 in the same order
