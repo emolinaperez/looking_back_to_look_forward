@@ -107,51 +107,55 @@ class FeatureExtractor:
             val_t0, val_t1 = np.nan, np.nan
         return (val_t1 - val_t0) / (t1 - t0) if pd.notna(val_t1) else np.nan
     
-    def extract_ts_features(self, group_df, collapse_thresh=0.2, t0=0, t1=5):
+    def extract_ts_features(self, group_df, collapse_thresh=0.2):
         """
         Extracts time series features from a given DataFrame for specified state variables.
-
-        Parameters:
-        -----------
-        group_df : pd.DataFrame
-            DataFrame containing the time series data for the group.
-        collapse_thresh : float, optional
-            Threshold value to determine the time to collapse (default is 0.2).
-        t0 : int, optional
-            Initial time point for growth rate calculation (default is 0).
-        t1 : int, optional
-            Final time point for growth rate calculation (default is 5).
-
-        Returns:
-        --------
-        pd.Series
-            A pandas Series containing the extracted features for each state variable.
-            The features include:
-            - final value
-            - maximum value
-            - minimum value
-            - area under the curve (AUC)
-            - time to collapse
-            - standard deviation
-            - growth rate
-
-        State Variables:
-        ----------------
-        - Resources
-        - Economy
-        - Bureaucracy
-        - Pollution
+        Adds additional delta features for the first 20 periods.
         """
         features = {}
         state_vars = ["Resources", "Economy", "Bureaucracy", "Pollution"]
 
+        # Ensure the data is sorted by time
+        group_df = group_df.sort_values("time")
+
         for state_var in state_vars:
+            # Standard features
             features[state_var + "_final"] = self.get_final_value(group_df, state_var)
             features[state_var + "_max"] = self.get_max_value(group_df, state_var)
             features[state_var + "_min"] = self.get_min_value(group_df, state_var)
             features[state_var + "_auc"] = self.get_auc(group_df, state_var)
+            
+            features[state_var + "_max_min_diff"] = features[state_var + "_max"] - features[state_var + "_min"]
+            features[state_var + "_final_min_diff"] = features[state_var + "_final"] - features[state_var + "_min"]
+            features[state_var + "_final_initial_diff"] = features[state_var + "_final"] - group_df[state_var].iloc[0]
+
             features[state_var + "_time_to_collapse"] = self.get_time_to_collapse(group_df, state_var, collapse_thresh)
             features[state_var + "_std"] = self.get_std(group_df, state_var)
-            features[state_var + "_growth_rate"] = self.get_growth_rate(group_df, state_var, t0, t1)
+            features[state_var + "_growth_rate_t4"] = self.get_growth_rate(group_df, state_var, 0, 4)
+            features[state_var + "_growth_rate_t25"] = self.get_growth_rate(group_df, state_var, 0, 25)
+            
+        
+            # Early delta: difference between the 5th period and the initial value
+            early_delta = group_df[state_var].iloc[5] - group_df[state_var].iloc[0]
+            features[state_var + "_early_delta"] = early_delta
+            # Mid delta: difference between the 15th period and the initial value
+            mid_delta = group_df[state_var].iloc[20] - group_df[state_var].iloc[0]
+            features[state_var + "_mid_delta"] = mid_delta
+            
+            # Early average difference: average change between consecutive values over the first 5 periods
+            early_avg_diff = group_df[state_var].iloc[:5].diff().mean()
+            features[state_var + "_early_avg_diff"] = early_avg_diff
+
+            # Mid average difference: average change between consecutive values over the first 20 periods
+            mid_avg_diff = group_df[state_var].iloc[:20].diff().mean()
+            features[state_var + "_mid_avg_diff"] = mid_avg_diff
 
         return pd.Series(features)
+
+# Example usage:
+# Assuming output_df is the DataFrame containing the simulation results with columns:
+#   Resources, Economy, Bureaucracy, Pollution, time, run_id
+#
+# feature_extractor = FeatureExtractor()
+# features_df = output_df.groupby("run_id").apply(feature_extractor.extract_ts_features).reset_index()
+
