@@ -84,7 +84,7 @@ factor_names = [
     'k_pollution_decay:X'
 ]
 
-sample_size = 100
+sample_size = 1000
 n_factors = len(factor_names)
 
 # Generate LHS in [0,1] and then scale to [0.5, 1.5]
@@ -173,8 +173,8 @@ out_all = pd.concat(results, ignore_index=True)
 # ---------------------------
 # Write output CSV files
 # ---------------------------
-ensamble_path = tableu_dir / "bardis_ensemble_python_ver.csv"
-design_path = tableu_dir / "exp_design_python_ver.csv"
+ensamble_path = tableu_dir / "bardis_ensemble_python_ver_1000.csv"
+design_path = tableu_dir / "exp_design_python_ver_1000.csv"
 
 out_all.to_csv(ensamble_path, index=False)
 exp_df.to_csv(design_path, index=False)
