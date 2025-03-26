@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 class FeatureExtractor:
     """
@@ -158,4 +160,47 @@ class FeatureExtractor:
 #
 # feature_extractor = FeatureExtractor()
 # features_df = output_df.groupby("run_id").apply(feature_extractor.extract_ts_features).reset_index()
+
+class EDAUtils:
+
+    @staticmethod
+    def apply_log_transform(df, cols):
+        """
+        Applies log transformation to the specified columns of a DataFrame.
+        If any values in a column are <= 0, an offset is added to ensure all values are positive.
+
+        Parameters:
+            df (pd.DataFrame): The input DataFrame.
+            cols (list of str): List of column names to transform.
+
+        Returns:
+            pd.DataFrame: A new DataFrame with log-transformed columns.
+        """
+        df_trans = df.copy()
+        for col in cols:
+            # Check if the column contains non-positive values.
+            if (df_trans[col] <= 0).any():
+                # Offset by adding (abs(min_value) + 1) so that all values become positive.
+                offset = abs(df_trans[col].min()) + 1
+                df_trans[col] = np.log1p(df_trans[col] + offset)
+                print(f"Applied log1p with offset {offset} to column: {col}")
+            else:
+                df_trans[col] = np.log(df_trans[col])
+                print(f"Applied natural log to column: {col}")
+        
+        return df_trans
+    
+    @staticmethod
+    def plot_histograms(df, figsize=(20, 15)):
+        # Histograms for each numeric feature
+        df.hist(figsize=figsize)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_corr_heatmap(df, figsize=(20, 15)):
+        # Correlation heatmap to inspect relationships between features
+        plt.figure(figsize=figsize)
+        sns.heatmap(df.corr(), annot=True, cmap="coolwarm")
+        plt.title("Feature Correlation Heatmap")
+        plt.show()
 
