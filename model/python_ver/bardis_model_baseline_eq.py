@@ -18,6 +18,8 @@ bm = BardisModel()
 state0 = [1.0, 1.0, 1.0, 1.0]
 
 # Model parameters
+# TODO: Update the ef_ parameters to 1 and then change all other parameters to replicate paper's figure 5
+# Under figure 5 we have the parameters we need to use to replicate it
 params = {
     "k_resources":  0.15,             # Autoregeneration rate of resources  
     "ef_economy_resources_on_prod": 0.08,   # Production rate from resources
