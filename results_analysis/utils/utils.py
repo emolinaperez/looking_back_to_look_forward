@@ -109,7 +109,36 @@ class FeatureExtractor:
             val_t0, val_t1 = np.nan, np.nan
         return (val_t1 - val_t0) / (t1 - t0) if pd.notna(val_t1) else np.nan
     
-    def extract_ts_features(self, group_df, collapse_thresh=0.2):
+    def calculate_delta(self, df, feature, t):
+        """
+        Calculate the delta of a specified feature at a given time point.
+
+        Parameters:
+        df (pandas.DataFrame): The DataFrame containing the data.
+        feature (str): The name of the feature/column for which to calculate the delta.
+        t (int or float): The time point at which to calculate the delta.
+
+        Returns:
+        float: The delta value of the specified feature at time t.
+        """
+        return df.loc[df["time"] == t, feature].values[0] - df.loc[df["time"] == (t - 1), feature].values[0]
+    
+    def get_max_value_at_time_window(self, df, feature, t0, t1):
+        """
+        Get the maximum value of a specified feature within a time window.
+
+        Parameters:
+        df (pandas.DataFrame): The DataFrame containing the data.
+        feature (str): The name of the feature/column for which to find the maximum value.
+        t0 (int or float): The start time of the window.
+        t1 (int or float): The end time of the window.
+
+        Returns:
+        float: The maximum value of the specified feature within the time window.
+        """
+        return df[(df["time"] >= t0) & (df["time"] <= t1)][feature].max()
+       
+    def extract_ts_features(self, group_df, collapse_thresh=0.01):
         """
         Extracts time series features from a given DataFrame for specified state variables.
         Adds additional delta features for the first 20 periods.
@@ -129,28 +158,44 @@ class FeatureExtractor:
             
             features[state_var + "_max_min_diff"] = features[state_var + "_max"] - features[state_var + "_min"]
             features[state_var + "_final_min_diff"] = features[state_var + "_final"] - features[state_var + "_min"]
+            # features[state_var + "_final_max_diff"] = features[state_var + "_final"] - features[state_var + "_max"]
+            # features[state_var + "initial_min_diff"] = group_df[state_var].iloc[0] - features[state_var + "_min"]
+            # features[state_var + "_initial_max_diff"] = group_df[state_var].iloc[0] - features[state_var + "_max"]
             features[state_var + "_final_initial_diff"] = features[state_var + "_final"] - group_df[state_var].iloc[0]
 
-            features[state_var + "_time_to_collapse"] = self.get_time_to_collapse(group_df, state_var, collapse_thresh)
-            features[state_var + "_std"] = self.get_std(group_df, state_var)
-            features[state_var + "_growth_rate_t4"] = self.get_growth_rate(group_df, state_var, 0, 4)
-            features[state_var + "_growth_rate_t25"] = self.get_growth_rate(group_df, state_var, 0, 25)
+
+            # features[state_var + "_time_to_collapse"] = self.get_time_to_collapse(group_df, state_var, collapse_thresh)
+            # features[state_var + "_std"] = self.get_std(group_df, state_var)
+            # features[state_var + "_growth_rate_t4"] = self.get_growth_rate(group_df, state_var, 0, 4)
+            # features[state_var + "_growth_rate_t25"] = self.get_growth_rate(group_df, state_var, 0, 25)
             
         
-            # Early delta: difference between the 5th period and the initial value
-            early_delta = group_df[state_var].iloc[5] - group_df[state_var].iloc[0]
-            features[state_var + "_early_delta"] = early_delta
-            # Mid delta: difference between the 15th period and the initial value
-            mid_delta = group_df[state_var].iloc[20] - group_df[state_var].iloc[0]
-            features[state_var + "_mid_delta"] = mid_delta
+            # # Early delta: difference between the 5th period and the initial value
+            # early_delta = group_df[state_var].iloc[5] - group_df[state_var].iloc[0]
+            # features[state_var + "_early_delta"] = early_delta
+            # # Mid delta: difference between the 15th period and the initial value
+            # mid_delta = group_df[state_var].iloc[20] - group_df[state_var].iloc[0]
+            # features[state_var + "_mid_delta"] = mid_delta
             
-            # Early average difference: average change between consecutive values over the first 5 periods
-            early_avg_diff = group_df[state_var].iloc[:5].diff().mean()
-            features[state_var + "_early_avg_diff"] = early_avg_diff
+            # # Early average difference: average change between consecutive values over the first 5 periods
+            # early_avg_diff = group_df[state_var].iloc[:5].diff().mean()
+            # features[state_var + "_early_avg_diff"] = early_avg_diff
 
-            # Mid average difference: average change between consecutive values over the first 20 periods
-            mid_avg_diff = group_df[state_var].iloc[:20].diff().mean()
-            features[state_var + "_mid_avg_diff"] = mid_avg_diff
+            # # Mid average difference: average change between consecutive values over the first 20 periods
+            # mid_avg_diff = group_df[state_var].iloc[:20].diff().mean()
+            # features[state_var + "_mid_avg_diff"] = mid_avg_diff
+
+            # Calculate deltas for the first 25 periods every 5 periods
+            for i in range(5, 31, 5):
+                features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
+            
+            # Calculate the delta for the after the 25th period every 25 periods
+            for i in range(30, 201, 10):
+                features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
+
+            # Calculate the maximum value of the feature every 25 periods
+            for i in range(0, 201, 25):
+                features[state_var + f"_max_{i}"] = self.get_max_value_at_time_window(group_df, state_var, i, i+25)
 
         return pd.Series(features)
 
