@@ -137,6 +137,21 @@ class FeatureExtractor:
         float: The maximum value of the specified feature within the time window.
         """
         return df[(df["time"] >= t0) & (df["time"] <= t1)][feature].max()
+    
+    def get_min_value_at_time_window(self, df, feature, t0, t1):
+        """
+        Get the minimum value of a specified feature within a time window.
+
+        Parameters:
+        df (pandas.DataFrame): The DataFrame containing the data.
+        feature (str): The name of the feature/column for which to find the minimum value.
+        t0 (int or float): The start time of the window.
+        t1 (int or float): The end time of the window.
+
+        Returns:
+        float: The minimum value of the specified feature within the time window.
+        """
+        return df[(df["time"] >= t0) & (df["time"] <= t1)][feature].min()
        
     def extract_ts_features(self, group_df, collapse_thresh=0.01):
         """
@@ -196,6 +211,10 @@ class FeatureExtractor:
             # Calculate the maximum value of the feature every 25 periods
             for i in range(0, 201, 25):
                 features[state_var + f"_max_{i}"] = self.get_max_value_at_time_window(group_df, state_var, i, i+25)
+
+            #TODO Calculate the minimum value of the feature every 25 periods
+            for i in range(0, 201, 25):
+                features[state_var + f"_min_{i}"] = self.get_min_value_at_time_window(group_df, state_var, i, i+25)
 
         return pd.Series(features)
 
