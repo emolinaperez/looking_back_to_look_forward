@@ -162,4 +162,5 @@ cython_debug/
 #.idea/
 
 # results analysis dir
-results_analysis/
+results_analysis/processed_data
+tableau/
