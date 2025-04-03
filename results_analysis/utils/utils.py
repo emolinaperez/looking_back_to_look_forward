@@ -1,7 +1,23 @@
+import os
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from utils.utils import *
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.cluster import AgglomerativeClustering
 import seaborn as sns
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import DBSCAN
+from sklearn.mixture import GaussianMixture
+import matplotlib.patches as mpatches
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics import davies_bouldin_score
+import math
+from scipy import stats
+
 
 class FeatureExtractor:
     """
@@ -228,6 +244,32 @@ class FeatureExtractor:
 class EDAUtils:
 
     @staticmethod
+    def get_skewed_variables(df, threshold=1):
+        """
+        Identify skewed variables in the DataFrame based on a specified threshold.
+        Parameters:
+            df (pd.DataFrame): The input DataFrame.
+            threshold (float): The threshold value for skewness.
+        Returns:
+            list: A list of column names that are skewed.
+        """
+        # Check if the DataFrame is empty
+        if df.empty:
+            print("DataFrame is empty.")
+            return []
+        # Check if the DataFrame has numeric columns
+        if df.select_dtypes(include=[np.number]).empty:
+            print("No numeric columns in DataFrame.")
+            return []
+     
+        # Calculate skewness for numeric features in the DataFrame
+        skewness = df.skew(numeric_only=True)
+    
+        skewed_features = skewness[abs(skewness) > threshold].index.tolist()
+
+        return skewed_features
+
+    @staticmethod
     def apply_log_transform(df, cols):
         """
         Applies log transformation to the specified columns of a DataFrame.
@@ -261,6 +303,7 @@ class EDAUtils:
         plt.tight_layout()
         plt.show()
 
+    @staticmethod
     def plot_corr_heatmap(df, figsize=(20, 15)):
         # Correlation heatmap to inspect relationships between features
         plt.figure(figsize=figsize)
@@ -268,3 +311,197 @@ class EDAUtils:
         plt.title("Feature Correlation Heatmap")
         plt.show()
 
+
+class ClusteringPipeline:
+
+    def scale_features(self, df):
+        """
+        Scale features using StandardScaler.
+        Parameters:
+            df (pd.DataFrame): The input DataFrame containing features to be scaled.
+        Returns:
+            pd.DataFrame: A DataFrame with scaled features.
+        """
+        # Check if the DataFrame is empty
+        if df.empty:
+            print("DataFrame is empty.")
+            return pd.DataFrame()
+        # Check if the DataFrame has numeric columns
+        if df.select_dtypes(include=[np.number]).empty:
+            print("No numeric columns in DataFrame.")
+            return pd.DataFrame()
+        # Scale features using StandardScaler
+        X = df.copy()
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+    def pca(self, df):
+        pass
+    
+    def train_kmeans():
+        pass
+    
+    def train_dbscan():
+        pass
+
+    def kmeans_elbow():
+        pass
+    def find_optimal_k():
+        pass
+
+    def dbscan_elbow():
+        pass
+
+    def find_optimal_eps():
+        pass
+
+
+class StatsUtils:
+
+    @staticmethod
+    def compute_confidence_intervals(df, cluster_id_col, conf=0.95):
+        """
+        Compute the confidence interval for each numeric variable per cluster.
+        
+        Parameters:
+        df (DataFrame): Input data frame.
+        cluster_id_col (str): Column name for the cluster id (e.g., 'kmeans_cluster_id').
+        conf (float): Confidence level (default 0.95).
+        
+        Returns:
+        DataFrame: A summary table with one row per cluster and variable containing:
+                    - cluster id
+                    - variable name
+                    - mean
+                    - lower_ci: lower bound of the confidence interval
+                    - upper_ci: upper bound of the confidence interval
+                    - n: number of observations used
+        """
+        # Drop 'run_id' if present.
+        if 'run_id' in df.columns:
+            df = df.drop(columns=['run_id'])
+        
+        # Drop any other cluster id columns that are not the chosen one.
+        cluster_cols = [col for col in df.columns if col.endswith('_cluster_id')]
+        for col in cluster_cols:
+            if col != cluster_id_col:
+                df = df.drop(columns=[col])
+        
+        # Consider only numeric columns (except the cluster id column).
+        numeric_columns = [col for col in df.columns 
+                        if col != cluster_id_col and np.issubdtype(df[col].dtype, np.number)]
+        
+        results = []
+        # Group by the cluster id and compute CI for each numeric column.
+        for cluster, group in df.groupby(cluster_id_col):
+            for col in numeric_columns:
+                data = group[col].dropna()
+                n = len(data)
+                if n > 1:
+                    mean_val = data.mean()
+                    sem = stats.sem(data)  # standard error of the mean
+                    t_val = stats.t.ppf((1 + conf) / 2., n - 1)  # t critical value for n-1 degrees of freedom
+                    margin = sem * t_val
+                    lower = mean_val - margin
+                    upper = mean_val + margin
+                else:
+                    mean_val = data.mean()
+                    lower, upper = np.nan, np.nan  # Not enough data to compute CI
+                results.append({
+                    cluster_id_col: cluster,
+                    'variable': col,
+                    'mean': mean_val,
+                    'lower_ci': lower,
+                    'upper_ci': upper,
+                    'n': n
+                })
+        
+        return pd.DataFrame(results)
+    
+    @staticmethod
+    def plot_distribution_by_cluster(df, cluster_id_col, density=True):
+        """
+        Plot the normalized distribution of each column (except the cluster id column)
+        by cluster in one figure using subplots. Normalization ensures that each histogram
+        is scaled so the total area equals 1, allowing for comparison across clusters.
+        
+        Parameters:
+        df (DataFrame): The input DataFrame.
+        cluster_id_col (str): The name of the cluster id column to group by (e.g., 'kmeans_cluster_id').
+        """
+        # Drop 'run_id' if it exists
+        if 'run_id' in df.columns:
+            df = df.drop(columns=['run_id'])
+        
+        # Drop any other cluster id columns that are not the chosen one
+        cluster_cols = [col for col in df.columns if col.endswith('_cluster_id')]
+        for col in cluster_cols:
+            if col != cluster_id_col:
+                df = df.drop(columns=[col])
+        
+        # Identify the columns to plot (all columns except the chosen cluster id)
+        value_columns = [col for col in df.columns if col != cluster_id_col]
+        clusters = df[cluster_id_col].unique()
+        
+        n_plots = len(value_columns)
+        # Compute grid size (roughly square)
+        ncols = math.ceil(math.sqrt(n_plots))
+        nrows = math.ceil(n_plots / ncols)
+        
+        fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols*5, nrows*4))
+        
+        # Flatten axes array for easy iteration
+        if n_plots > 1:
+            axes = axes.flatten()
+        else:
+            axes = [axes]
+        
+        for i, col in enumerate(value_columns):
+            ax = axes[i]
+            # Plot normalized histograms for each cluster on the same subplot
+            for cluster in clusters:
+                data = df[df[cluster_id_col] == cluster][col]
+                ax.hist(data, bins=20, alpha=0.5, density=density, label=f'Cluster {cluster}')
+            ax.set_title(col)
+            ax.set_xlabel(col)
+            ax.set_ylabel('Density')
+            ax.legend()
+        
+        # Remove any empty subplots
+        for j in range(i+1, len(axes)):
+            fig.delaxes(axes[j])
+        
+        fig.suptitle(f'Normalized Distributions by {cluster_id_col}', fontsize=16)
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.show()
+    
+    
+    @staticmethod
+    def plot_boxplot_with_error_bar(df, ci_df, var_to_plot, cluster_id_col, conf=0.95):
+        """
+        Plot a boxplot of a variable by cluster and overlay the means with error bars for the confidence intervals.
+        parameters:
+            df (DataFrame): The input DataFrame containing the data.
+            ci_df (DataFrame): DataFrame containing the confidence intervals for each cluster.
+            var_to_plot (str): The variable to plot.
+            cluster_id_col (str): The name of the cluster id column (e.g., 'kmeans_cluster_id').
+            conf (float): Confidence level for the error bars (default is 0.95).
+        returns:
+            None: Displays the plot.
+        """
+    
+        plt.figure(figsize=(8, 6))
+        sns.boxplot(x=cluster_id_col, y=var_to_plot, data=df)
+
+        # Overlay the means with error bars for the confidence intervals.
+        cluster_order = sorted(df[cluster_id_col].unique())
+        ci_subset = ci_df[ci_df['variable'] == var_to_plot].set_index(cluster_id_col)
+
+        means = [ci_subset.loc[c, 'mean'] for c in cluster_order]
+        lower_err = [ci_subset.loc[c, 'mean'] - ci_subset.loc[c, 'lower_ci'] for c in cluster_order]
+        upper_err = [ci_subset.loc[c, 'upper_ci'] - ci_subset.loc[c, 'mean'] for c in cluster_order]
+        errors = np.array([lower_err, upper_err])
+
+        plt.errorbar(cluster_order, means, yerr=errors, fmt='o', color='red', capsize=5)
+        plt.title(f'Boxplot and {conf*100:.0f}% CI for {var_to_plot}')
+        plt.show()
