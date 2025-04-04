@@ -505,3 +505,62 @@ class StatsUtils:
         plt.errorbar(cluster_order, means, yerr=errors, fmt='o', color='red', capsize=5)
         plt.title(f'Boxplot and {conf*100:.0f}% CI for {var_to_plot}')
         plt.show()
+
+    @staticmethod
+    def plot_single_group_boxplots_with_error_bars(df, ci_df, variables, cluster_id_col, group_name="", conf=0.95):
+        """
+        Plot a single group of variables with boxplots by cluster, overlaying means with confidence intervals.
+        
+        Parameters:
+            df (DataFrame): The input DataFrame containing your data.
+            ci_df (DataFrame): DataFrame containing the confidence intervals for each variable per cluster.
+                            It should have columns: cluster_id_col, 'variable', 'mean', 'lower_ci', 'upper_ci', 'n'
+            variables (list): List of variable names (strings) to plot.
+            cluster_id_col (str): The name of the cluster id column (e.g., 'kmeans_cluster_id').
+            group_name (str): Optional name for the group (e.g., "Resources") for labeling purposes.
+            conf (float): Confidence level for the error bars (default is 0.95).
+            
+        Returns:
+            None: Displays a single figure with subplots.
+        """
+        # Drop 'run_id' if it exists.
+        if 'run_id' in df.columns:
+            df = df.drop(columns=['run_id'])
+        
+        # Drop any other cluster id columns that are not the chosen one.
+        cluster_cols = [col for col in df.columns if col.endswith('_cluster_id')]
+        for col in cluster_cols:
+            if col != cluster_id_col:
+                df = df.drop(columns=[col])
+        
+        # Set up the grid for subplots.
+        n_vars = len(variables)
+        ncols = 2
+        nrows = math.ceil(n_vars / ncols)
+        fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 5, nrows * 4))
+        axes = axes.flatten()
+
+        # Define the order of clusters (assuming they are sortable).
+        cluster_order = sorted(df[cluster_id_col].unique())
+        
+        # Plot each variable in its own subplot.
+        for i, var in enumerate(variables):
+            ax = axes[i]
+            # Create the boxplot.
+            sns.boxplot(x=cluster_id_col, y=var, data=df, ax=ax)
+            
+            # Extract the confidence interval info for the current variable.
+            ci_subset = ci_df[ci_df['variable'] == var].set_index(cluster_id_col)
+            means = [ci_subset.loc[c, 'mean'] for c in cluster_order]
+            lower_err = [ci_subset.loc[c, 'mean'] - ci_subset.loc[c, 'lower_ci'] for c in cluster_order]
+            upper_err = [ci_subset.loc[c, 'upper_ci'] - ci_subset.loc[c, 'mean'] for c in cluster_order]
+            errors = np.array([lower_err, upper_err])
+            
+            # Overlay error bars for the mean and confidence interval.
+            ax.errorbar(cluster_order, means, yerr=errors, fmt='o', color='red', capsize=5)
+            ax.set_title(var)
+        
+        # Add a common title to the figure.
+        fig.suptitle(f'Boxplots with {conf*100:.0f}% CIs for Group: {group_name}', fontsize=16)
+        plt.tight_layout(rect=[0, 0, 1, 0.94])
+        plt.show()
