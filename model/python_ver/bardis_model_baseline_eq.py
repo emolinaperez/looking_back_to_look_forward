@@ -15,23 +15,24 @@ tableu_dir_path = os.path.join(project_dir_path, "tableau")
 bm = BardisModel()
 
 # Initial conditions with order "Resources", "Economy", "Bureaucracy", "Pollution"
-state0 = [1.0, 1.0, 1.0, 1.0]
+# state0 = [1.0, 1.0, 1.0, 1.0]
+state0 = [1.0, 0.1, 0.01, 0.001] 
 
 # Model parameters
 # TODO: Update the ef_ parameters to 1 and then change all other parameters to replicate paper's figure 5
 # Under figure 5 we have the parameters we need to use to replicate it
 params = {
-    "k_resources":  0.15,             # Autoregeneration rate of resources  
-    "ef_economy_resources_on_prod": 0.08,   # Production rate from resources
-    "ef_bureaucracy_on_prod": 0.02,    # Effect of bureaucracy on production 
-    "k_deprec": 0.01,                # Depreciation rate
-    "ef_pollution_on_depreciation": 0.05,   # Effect of pollution on economy depreciation 
-    "k_bureaucracy": 0.01,           # Bureaucracy formation rate
-    "ef_economy_on_bureaucracy": 0.03, # Effect of the economy on bureaucracy formation 
-    "k_decay_bureaucracy": 0.02,     # Bureaucracy decay rate
-    "ef_pollution_on_bureaucracy": 0.02, # Effect of pollution on bureaucracy decay  
-    "k_pollution": 0.05,             # Pollution generation rate 
-    "k_pollution_decay": 0.150       # Pollution decay rate
+    "k_resources":  0.0,             # Autoregeneration rate of resources  
+    "ef_economy_resources_on_prod": 3.4546,   # Production rate from resources
+    "ef_bureaucracy_on_prod": 3.4546,    # Effect of bureaucracy on production 
+    "k_deprec": 1.49,                # Depreciation rate
+    "ef_pollution_on_depreciation": 1,   # Effect of pollution on economy depreciation 
+    "k_bureaucracy": 18.0,           # Bureaucracy formation rate
+    "ef_economy_on_bureaucracy": 1, # Effect of the economy on bureaucracy formation 
+    "k_decay_bureaucracy": 49.9,     # Bureaucracy decay rate
+    "ef_pollution_on_bureaucracy": 1, # Effect of pollution on bureaucracy decay  
+    "k_pollution": 0.0,             # Pollution generation rate 
+    "k_pollution_decay": 0.0       # Pollution decay rate
 }
 
 # Time sequence (0 to 200 with step 0.01)
