@@ -4,6 +4,7 @@ from scipy.stats import qmc
 from bardis_model import BardisModel
 import pathlib
 import logging
+import yaml
 
 # ---------------------------
 # Set up logging
@@ -31,10 +32,24 @@ bm = BardisModel()
 # Set up file paths
 # ---------------------------
 script_dir = pathlib.Path(__file__).parent.absolute()
+config_dir = script_dir / "config"
 root = script_dir.parent.parent
 tableu_dir = root / "tableau"
 logging.info(f"Root directory: {root}")
 
+# ----------------------------
+# Load configuration file
+# ----------------------------
+config_file = config_dir / "config.yaml"
+with open(config_file, 'r') as file:
+    config = yaml.safe_load(file)
+logging.info(f"Configuration loaded from {config_file}")
+
+# Extract the parameters from the config file
+sample_size = config['sample_size']
+
+
+logging.info(f"Sample size: {sample_size}")
 # ---------------------------
 # Set up initial conditions
 # ---------------------------
@@ -84,7 +99,6 @@ factor_names = [
     'k_pollution_decay:X'
 ]
 
-sample_size = 1000
 n_factors = len(factor_names)
 
 # Generate LHS in [0,1] and then scale to [0.5, 1.5]
@@ -173,8 +187,8 @@ out_all = pd.concat(results, ignore_index=True)
 # ---------------------------
 # Write output CSV files
 # ---------------------------
-ensamble_path = tableu_dir / "bardis_ensemble_python_ver_1000.csv"
-design_path = tableu_dir / "exp_design_python_ver_1000.csv"
+ensamble_path = tableu_dir / f"bardis_ensemble_python_ver_{sample_size}.csv"
+design_path = tableu_dir / f"exp_design_python_ver_{sample_size}.csv"
 
 out_all.to_csv(ensamble_path, index=False)
 exp_df.to_csv(design_path, index=False)
