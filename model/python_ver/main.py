@@ -55,28 +55,28 @@ logging.info(f"Sample size: {sample_size}")
 # ---------------------------
 
 # Initial conditions for the state variables
-initial_state = [1.0, 1.0, 1.0, 1.0]
+initial_state = [1.0, 0.1, 0.01, 0.001]
 
 # Dynamic equilibrium parameter vector p_0
 p_0 = {
-    "k_resources": 0.15 * 0.5,                    # 0.075
-    "ef_economy_resources_on_prod": 0.08 * 1.5,     # 0.12
-    "ef_bureaucracy_on_prod": 0.02 * 1.5,           # 0.03
-    "k_deprec": 0.01,
-    "ef_pollution_on_depreciation": 0.05,
-    "k_bureaucracy": 0.01,
-    "ef_economy_on_bureaucracy": 0.03,
-    "k_decay_bureaucracy": 0.02,
-    "ef_pollution_on_bureaucracy": 0.02,
-    "k_pollution": 0.05,
-    "k_pollution_decay": 0.150
+    'k_resources': 0.15 * 0.1 * 0.08,  # Autoregeneration rate of resources  
+    'ef_economy_resources_on_prod': 17.0 * 0.08,   # Production rate
+    'ef_bureaucracy_on_prod': 0.02 * 0.08,  # Effect of bureaucracy on production 
+    'k_deprec': 0.001 * 0.1 * 0.08,  # Depreciation rate
+    'ef_pollution_on_depreciation': 0.05 * 0.08,  # Effect of pollution on economy depreciation 
+    'k_bureaucracy': 0.01 * 0.08,  # Bureaucracy formation rate
+    'ef_economy_on_bureaucracy': 3.5 * 0.8 * 0.08,  # Effect of the Economy on bureaucracy formation
+    'k_decay_bureaucracy': 0.5 * 5 * 0.08,  # Bureaucracy decay rate
+    'ef_pollution_on_bureaucracy': 0.02 * 0.08,  # Effect of pollution on bureaucracy decay  
+    'k_pollution': 0.12 * 0.08,  # Pollution generation rate 
+    'k_pollution_decay': 0.0 * 0.08  # Pollution decay rate
 }
 
 # Time steps and integration method
 t = np.arange(0, 200.01, 0.01)
 
-# Round the time sequence to 2 decimal places
-t = np.round(t, 2)
+# # Round the time sequence to 2 decimal places
+# t = np.round(t, 2)
 
 # Our integration method is "euler" (using our custom Euler integrator)
 
