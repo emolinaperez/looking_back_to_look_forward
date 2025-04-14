@@ -55,11 +55,11 @@ class BardisModel:
         resource_inflow = k_resources * Resources
         extractive_pollution = k_pollution * Economy * Resources
 
-        production = ef_economy_resources_on_prod * Resources * Economy + ef_bureaucracy_on_prod * Bureaucracy
-        depreciation = k_deprec * Economy + ef_pollution_on_depreciation * Pollution
+        production = ef_economy_resources_on_prod * Resources * Economy * Bureaucracy
+        depreciation = k_deprec * Economy * Pollution
 
-        bureaucracy_creation = ef_economy_on_bureaucracy * Economy + k_bureaucracy * Bureaucracy
-        bureaucracy_decay = k_decay_bureaucracy * Bureaucracy + ef_pollution_on_bureaucracy * Pollution
+        bureaucracy_creation = ef_economy_on_bureaucracy * Economy * Bureaucracy
+        bureaucracy_decay = k_decay_bureaucracy * Bureaucracy * Pollution
 
         pollution_abatement = k_pollution_decay * Pollution
 

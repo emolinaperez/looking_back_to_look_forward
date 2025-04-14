@@ -36,22 +36,22 @@ dynamics_model <- function(time, state, parameters) {
 
 
 # Initial conditions
-state <- c(Resources = 1.0, Economy = .01, Bureaucracy = 0.01, Pollution = 0.001)
+state <- c(Resources = 1.0, Economy = 0.1, Bureaucracy = 0.01, Pollution = 0.001)
 
 # Model parameters
 parameters <- c(
-  k_resources =  0.15*0.01 , # Autoregeneration rate of resources  
-  ef_economy_resources_on_prod = .38*20,          # Production rate
+  k_resources =  0.15 * 0.1, # Autoregeneration rate of resources  
+  ef_economy_resources_on_prod = 17.0,          # Production rate
   ef_bureaucracy_on_prod = 0.02, # Effect of bureaucracy on production 
-  k_deprec = 0.15*0.1,       # Depreciation rate
+  k_deprec = 0.001 * 0.1,       # Depreciation rate
   ef_pollution_on_depreciation = 0.05, # Effect of pollution on economy depreciation 
   k_bureaucracy = 0.01,    # Bureaucracy formation rate
-  ef_economy_on_bureaucracy = 0.30*10, # Effect of the Economy of bureaucracy formation 
-  k_decay_bureaucracy = 0.5,          # Bureaucracy decay rate
+  ef_economy_on_bureaucracy = 3.5 * 0.8, # Effect of the Economy of bureaucracy formation 
+  k_decay_bureaucracy = 0.5 * 5,          # Bureaucracy decay rate
   ef_pollution_on_bureaucracy = 0.02, # Effect of pollution on bureaucracy decay  
-  k_pollution = 0.50, #Pollution generation rate 
-  k_pollution_decay = 0.150*0.5 # Pollution decay rate
-)
+  k_pollution = 0.12, #Pollution generation rate 
+  k_pollution_decay = 0.0 # Pollution decay rate
+) * 0.08
 
 # Time sequence (note the temporal granuality is required to avoid integration errors with rk4)
 time <- seq(0, 200, by = 0.01)
@@ -60,7 +60,7 @@ time <- seq(0, 200, by = 0.01)
 out <- ode(y = state, times = time, func = dynamics_model, parms = parameters, method="rk4")
 # Convert output to data frame
 out_df <- as.data.frame(out)
-dir.output <- "/Users/edmun/Library/CloudStorage/OneDrive-Personal/Edmundo-ITESM/3.Proyectos/63. Looking Back to Look Forward/looking_back_to_look_forward/tableau/"
+dir.output <- "/home/tony-ubuntu/decision_sciences/looking_back_to_look_forward/tableau/"
 write.csv(out_df,paste0(dir.output,"baseline.csv"),row.names=FALSE)
-
-head(out)
+ 
+# head(out)
