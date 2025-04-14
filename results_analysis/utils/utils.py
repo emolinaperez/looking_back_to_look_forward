@@ -187,8 +187,8 @@ class FeatureExtractor:
             features[state_var + "_min"] = self.get_min_value(group_df, state_var)
             features[state_var + "_auc"] = self.get_auc(group_df, state_var)
             
-            features[state_var + "_max_min_diff"] = features[state_var + "_max"] - features[state_var + "_min"]
-            features[state_var + "_final_min_diff"] = features[state_var + "_final"] - features[state_var + "_min"]
+            # features[state_var + "_max_min_diff"] = features[state_var + "_max"] - features[state_var + "_min"]
+            # features[state_var + "_final_min_diff"] = features[state_var + "_final"] - features[state_var + "_min"]
             # features[state_var + "_final_max_diff"] = features[state_var + "_final"] - features[state_var + "_max"]
             # features[state_var + "initial_min_diff"] = group_df[state_var].iloc[0] - features[state_var + "_min"]
             # features[state_var + "_initial_max_diff"] = group_df[state_var].iloc[0] - features[state_var + "_max"]
@@ -216,21 +216,21 @@ class FeatureExtractor:
             # mid_avg_diff = group_df[state_var].iloc[:20].diff().mean()
             # features[state_var + "_mid_avg_diff"] = mid_avg_diff
 
-            # Calculate deltas for the first 25 periods every 5 periods
-            for i in range(5, 31, 5):
-                features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
+            # # Calculate deltas for the first 25 periods every 5 periods
+            # for i in range(5, 31, 5):
+            #     features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
             
             # Calculate the delta for the after the 25th period every 25 periods
-            for i in range(30, 201, 10):
+            for i in range(25, 201, 25):
                 features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
 
-            # Calculate the maximum value of the feature every 25 periods
-            for i in range(0, 201, 25):
-                features[state_var + f"_max_{i}"] = self.get_max_value_at_time_window(group_df, state_var, i, i+25)
+            # # Calculate the maximum value of the feature every 25 periods
+            # for i in range(0, 201, 25):
+            #     features[state_var + f"_max_{i}"] = self.get_max_value_at_time_window(group_df, state_var, i, i+25)
 
-            #TODO Calculate the minimum value of the feature every 25 periods
-            for i in range(0, 201, 25):
-                features[state_var + f"_min_{i}"] = self.get_min_value_at_time_window(group_df, state_var, i, i+25)
+            # #TODO Calculate the minimum value of the feature every 25 periods
+            # for i in range(0, 201, 25):
+            #     features[state_var + f"_min_{i}"] = self.get_min_value_at_time_window(group_df, state_var, i, i+25)
 
         return pd.Series(features)
 
