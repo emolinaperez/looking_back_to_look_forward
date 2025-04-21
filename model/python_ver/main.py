@@ -47,9 +47,13 @@ logging.info(f"Configuration loaded from {config_file}")
 
 # Extract the parameters from the config file
 sample_size = config['sample_size']
+time_periods = config['time_periods']
+step_size = config['step_size']
 
 
 logging.info(f"Sample size: {sample_size}")
+logging.info(f"Time periods: {time_periods}")
+logging.info(f"Step size: {step_size}")
 # ---------------------------
 # Set up initial conditions
 # ---------------------------
@@ -73,7 +77,7 @@ p_0 = {
 }
 
 # Time steps and integration method
-t = np.arange(0, 200.01, 0.01)
+t = np.arange(0, time_periods + step_size, step_size)
 
 # # Round the time sequence to 2 decimal places
 # t = np.round(t, 2)
@@ -187,8 +191,8 @@ out_all = pd.concat(results, ignore_index=True)
 # ---------------------------
 # Write output CSV files
 # ---------------------------
-ensamble_path = tableu_dir / f"bardis_ensemble_python_ver_{sample_size}.csv"
-design_path = tableu_dir / f"exp_design_python_ver_{sample_size}.csv"
+ensamble_path = tableu_dir / f"bardis_ensemble_python_ver_{sample_size}_{time_periods}.csv"
+design_path = tableu_dir / f"exp_design_python_ver_{sample_size}_{time_periods}.csv"
 
 out_all.to_csv(ensamble_path, index=False)
 exp_df.to_csv(design_path, index=False)
