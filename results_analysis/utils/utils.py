@@ -24,6 +24,15 @@ class FeatureExtractor:
     """
     A class for extracting features from time series data.
     """
+    def __init__(self, time_periods):
+        """
+        Initialize the FeatureExtractor with the number of time periods.
+        
+        Parameters:
+        time_periods (int): The number of time periods in the simulation.
+        """
+        self.time_periods = time_periods
+
 
     def get_final_value(self, df, feature):
         """
@@ -170,7 +179,7 @@ class FeatureExtractor:
         """
         return df[(df["time"] >= t0) & (df["time"] <= t1)][feature].min()
        
-    def extract_ts_features(self, group_df, collapse_thresh=0.01):
+    def extract_ts_features(self, group_df):
         """
         Extracts time series features from a given DataFrame for specified state variables.
         Adds additional delta features for the first 20 periods.
@@ -222,7 +231,7 @@ class FeatureExtractor:
             #     features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
             
             # Calculate the delta for the after the 25th period every 25 periods
-            for i in range(25, 201, 25):
+            for i in range(25, self.time_periods + 1, 25):
                 features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
 
             # # Calculate the maximum value of the feature every 25 periods
