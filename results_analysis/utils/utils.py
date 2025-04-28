@@ -231,7 +231,10 @@ class FeatureExtractor:
             #     features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
             
             # Calculate the delta for the after the 25th period every 25 periods
-            for i in range(25, self.time_periods + 1, 25):
+            for i in range(25, 200 + 1, 25):
+                features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
+
+            for i in range(300, self.time_periods + 1, 100):
                 features[state_var + f"_delta_{i}"] = self.calculate_delta(group_df, state_var, i)
 
             # # Calculate the maximum value of the feature every 25 periods
