@@ -808,35 +808,66 @@ class StatsUtils:
         plt.tight_layout(rect=[0, 0, 1, 0.96])
         plt.show()
     
-    
     @staticmethod
-    def plot_boxplot_with_error_bar(df, ci_df, var_to_plot, cluster_id_col, conf=0.95):
+    def plot_boxplots_with_error_bars(df, ci_df, vars_to_plot, cluster_id_col, conf=0.95):
         """
-        Plot a boxplot of a variable by cluster and overlay the means with error bars for the confidence intervals.
+        Plot boxplots of multiple variables by cluster and overlay the means 
+        with error bars for the confidence intervals.
+        
         parameters:
             df (DataFrame): The input DataFrame containing the data.
             ci_df (DataFrame): DataFrame containing the confidence intervals for each cluster.
-            var_to_plot (str): The variable to plot.
-            cluster_id_col (str): The name of the cluster id column (e.g., 'kmeans_cluster_id').
+                              Must have columns [cluster_id_col, 'variable', 'mean', 'lower_ci', 'upper_ci'].
+            vars_to_plot (list of str): The variables to plot.
+            cluster_id_col (str): The name of the cluster id column.
             conf (float): Confidence level for the error bars (default is 0.95).
         returns:
             None: Displays the plot.
         """
-    
-        plt.figure(figsize=(8, 6))
-        sns.boxplot(x=cluster_id_col, y=var_to_plot, data=df)
-
-        # Overlay the means with error bars for the confidence intervals.
+        n = len(vars_to_plot)
+        # Choose layout: e.g., 2 columns
+        ncols = 4
+        nrows = math.ceil(n / ncols)
+        
+        fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6*ncols, 5*nrows), squeeze=False)
         cluster_order = sorted(df[cluster_id_col].unique())
-        ci_subset = ci_df[ci_df['variable'] == var_to_plot].set_index(cluster_id_col)
-
-        means = [ci_subset.loc[c, 'mean'] for c in cluster_order]
-        lower_err = [ci_subset.loc[c, 'mean'] - ci_subset.loc[c, 'lower_ci'] for c in cluster_order]
-        upper_err = [ci_subset.loc[c, 'upper_ci'] - ci_subset.loc[c, 'mean'] for c in cluster_order]
-        errors = np.array([lower_err, upper_err])
-
-        plt.errorbar(cluster_order, means, yerr=errors, fmt='o', color='red', capsize=5)
-        plt.title(f'Boxplot and {conf*100:.0f}% CI for {var_to_plot}')
+        
+        for idx, var in enumerate(vars_to_plot):
+            row, col = divmod(idx, ncols)
+            ax = axes[row][col]
+            
+            # Boxplot
+            sns.boxplot(x=cluster_id_col, y=var, data=df, ax=ax)
+            
+            # Prepare CI data for this variable
+            ci_subset = (
+                ci_df[ci_df['variable'] == var]
+                .set_index(cluster_id_col)
+                .reindex(cluster_order)
+            )
+            means = ci_subset['mean'].values
+            lower_err = means - ci_subset['lower_ci'].values
+            upper_err = ci_subset['upper_ci'].values - means
+            errors = np.vstack([lower_err, upper_err])
+            
+            # Overlay error bars
+            ax.errorbar(
+                cluster_order, means, 
+                yerr=errors, fmt='o', color='red', capsize=5
+            )
+            
+            ax.set_title(f'{var}')
+            ax.set_xlabel(cluster_id_col)
+            ax.set_ylabel(var)
+        
+        # Turn off unused subplots if any
+        total_plots = nrows * ncols
+        if total_plots > n:
+            for idx in range(n, total_plots):
+                row, col = divmod(idx, ncols)
+                fig.delaxes(axes[row][col])
+        
+        fig.tight_layout()
         plt.show()
 
     @staticmethod
