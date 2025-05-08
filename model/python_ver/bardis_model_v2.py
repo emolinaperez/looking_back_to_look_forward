@@ -20,16 +20,18 @@ class BardisModel:
 
         parameters (dict): Dictionary with model coefficients:
             - k_input_replenishment (float): Regeneration rate of State_Inputs.
-            - ef_inputs_capacity (float): Efficiency of converting inputs & complexity into capacity.
-            - ef_complexity_support (float): Boost to capacity from complexity (diminishing returns).
-            - k_capacity_drain (float): Rate at which burden drains state capacity.
-            - k_complexity_growth (float): Growth rate of administrative structures from capacity.
-            - k_complexity_decay (float): Decay of complexity due to systemic burden. #NOTE: Not sure if this is correct
-            - k_burden_accumulation (float): Rate at which activity adds to burden.
-            - k_burden_reduction (float): Rate of burden relief (e.g., reform, adaptation).
+            - ef_inputs_capacity (float): Efficiency of converting inputs & complexity into State_Capacity.
+            - ef_complexity_support (float): Boost to capacity from Administrative_Complexity.
+            - alpha_complexity_saturation (float): Controls the rate at which the marginal contribution of complexity saturates (i.e., diminishing returns).
+            - k_cost_complexity (float): Cost of maintaining Administrative_Complexity, deducted from State_Inputs.
+            - k_capacity_drain (float): Rate at which Systemic_Burden erodes State_Capacity.
+            - k_complexity_growth (float): Rate at which Administrative_Complexity increases with State_Capacity.
+            - k_complexity_decay (float): Rate at which Administrative_Complexity decays due to Systemic_Burden.
+            - k_burden_accumulation (float): Rate at which capacity activity contributes to Systemic_Burden.
+            - k_burden_reduction (float): Rate of Systemic_Burden reduction through relief mechanisms (e.g., reform, adaptation).
 
         Returns:
-        dict: Dictionary with flows:
+        dict: Dictionary with computed flows:
             - input_replenishment
             - capacity_realization
             - capacity_drain
@@ -37,7 +39,9 @@ class BardisModel:
             - complexity_decay
             - burden_accumulation
             - burden_reduction
+            - cost_of_complexity
         """
+
 
         # Unpack state variables
         State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden = state
@@ -46,18 +50,24 @@ class BardisModel:
         k_input_replenishment = parameters["k_input_replenishment"]
         ef_inputs_capacity = parameters["ef_inputs_capacity"]
         ef_complexity_support = parameters["ef_complexity_support"]
+        alpha_complexity_saturation = parameters["alpha_complexity_saturation"]  # NEW
+        k_cost_complexity = parameters.get("k_cost_complexity", 0.0)  # Optional
         k_capacity_drain = parameters["k_capacity_drain"]
         k_complexity_growth = parameters["k_complexity_growth"]
         k_complexity_decay = parameters["k_complexity_decay"]
         k_burden_accumulation = parameters["k_burden_accumulation"]
         k_burden_reduction = parameters["k_burden_reduction"]
 
+        # Complexity diminishing returns boost
+        complexity_effective_boost = (
+            ef_complexity_support * Administrative_Complexity /
+            (1 + alpha_complexity_saturation * Administrative_Complexity)
+        )
+
         # Flows
         input_replenishment = k_input_replenishment * State_Inputs
 
-        capacity_realization = ef_inputs_capacity * State_Inputs * (
-            1 + ef_complexity_support * Administrative_Complexity
-        )
+        capacity_realization = ef_inputs_capacity * State_Inputs * (1 + complexity_effective_boost)
 
         capacity_drain = k_capacity_drain * State_Capacity * Systemic_Burden
 
@@ -65,7 +75,10 @@ class BardisModel:
         complexity_decay = k_complexity_decay * Administrative_Complexity * Systemic_Burden
 
         burden_accumulation = k_burden_accumulation * capacity_realization
-        burden_reduction = k_burden_reduction * Systemic_Burden #NOTE: This might need to be adjusted
+        burden_reduction = k_burden_reduction * Systemic_Burden
+
+        # Optional: maintenance cost of complexity drains State_Inputs
+        cost_of_complexity = k_cost_complexity * Administrative_Complexity
 
         return {
             "input_replenishment": input_replenishment,
@@ -75,6 +88,7 @@ class BardisModel:
             "complexity_decay": complexity_decay,
             "burden_accumulation": burden_accumulation,
             "burden_reduction": burden_reduction,
+            "cost_of_complexity": cost_of_complexity  # pass this to derivatives
         }
 
     def compute_derivatives(self, state, flows):
@@ -112,9 +126,10 @@ class BardisModel:
         complexity_decay = flows["complexity_decay"]
         burden_accumulation = flows["burden_accumulation"]
         burden_reduction = flows["burden_reduction"]
+        cost_of_complexity = flows.get("cost_of_complexity", 0.0)
 
         # Derivatives
-        dInputs = input_replenishment - capacity_realization if State_Inputs > 0 else 0
+        dInputs = input_replenishment - capacity_realization - cost_of_complexity if State_Inputs > 0 else 0
         dCapacity = capacity_realization - capacity_drain if State_Capacity > 0 else 0
         dComplexity = complexity_growth - complexity_decay if Administrative_Complexity > 0 else 0
         dBurden = burden_accumulation - burden_reduction if Systemic_Burden > 0 else 0
