@@ -6,6 +6,15 @@ class BardisModel:
         compute_derivatives(state, flows):
         run_bardis_model(state, time, parameters):
     """
+    def __init__(self, debug=False):
+        """
+        Initialize the BardisModel class.
+
+        Args:
+            debug (bool): If True, enables debug mode for detailed logging.
+        """
+        self.debug = debug
+
     
     def compute_flows(self, state, parameters):
         """
@@ -80,6 +89,31 @@ class BardisModel:
         # Optional: maintenance cost of complexity drains State_Inputs
         cost_of_complexity = k_cost_complexity * Administrative_Complexity
 
+        # if self.debug True print all flows and parameters
+        if self.debug:
+            print("Flows:")
+            print(f"input_replenishment: {input_replenishment}")
+            print(f"capacity_realization: {capacity_realization}")
+            print(f"capacity_drain: {capacity_drain}")
+            print(f"complexity_growth: {complexity_growth}")
+            print(f"complexity_decay: {complexity_decay}")
+            print(f"burden_accumulation: {burden_accumulation}")
+            print(f"burden_reduction: {burden_reduction}")
+            print(f"cost_of_complexity: {cost_of_complexity}")
+            print("Parameters:")
+            print(f"k_input_replenishment: {k_input_replenishment}")
+            print(f"ef_inputs_capacity: {ef_inputs_capacity}")
+            print(f"ef_complexity_support: {ef_complexity_support}")
+            print(f"alpha_complexity_saturation: {alpha_complexity_saturation}")
+            print(f"k_cost_complexity: {k_cost_complexity}")
+            print(f"k_capacity_drain: {k_capacity_drain}")
+            print(f"k_complexity_growth: {k_complexity_growth}")
+            print(f"k_complexity_decay: {k_complexity_decay}")
+            print(f"k_burden_accumulation: {k_burden_accumulation}")
+            print(f"k_burden_reduction: {k_burden_reduction}")
+            print("Other:")
+            print(f"complexity_effective_boost: {complexity_effective_boost}")
+
         return {
             "input_replenishment": input_replenishment,
             "capacity_realization": capacity_realization,
@@ -133,6 +167,14 @@ class BardisModel:
         dCapacity = capacity_realization - capacity_drain if State_Capacity > 0 else 0
         dComplexity = complexity_growth - complexity_decay if Administrative_Complexity > 0 else 0
         dBurden = burden_accumulation - burden_reduction if Systemic_Burden > 0 else 0
+
+        # Optional: if debug print all derivatives
+        if self.debug:
+            print("Derivatives:")
+            print(f"dInputs: {dInputs}")
+            print(f"dCapacity: {dCapacity}")
+            print(f"dComplexity: {dComplexity}")
+            print(f"dBurden: {dBurden}")
 
         return [dInputs, dCapacity, dComplexity, dBurden]
 
