@@ -1,6 +1,6 @@
-class BardisModel:
+class TainterModel:
     """
-    BardisModel class encapsulates the computation of flows and derivatives for a given state and parameters in a socio-economic model.
+    TainterModel class encapsulates the computation of flows and derivatives for a given state and parameters in a socio-economic model.
     Methods:
         compute_flows(state, parameters):
         compute_derivatives(state, flows):
@@ -8,7 +8,7 @@ class BardisModel:
     """
     def __init__(self, debug=False):
         """
-        Initialize the BardisModel class.
+        Initialize the TainterModel class.
 
         Args:
             debug (bool): If True, enables debug mode for detailed logging.
@@ -26,6 +26,7 @@ class BardisModel:
             - State_Capacity (float): The ability of the state to function effectively.
             - Administrative_Complexity (float): The size and cost of managing the state.
             - Systemic_Burden (float): Accumulated costs, inefficiencies, unrest.
+            - State_Integrity (float): An abstract indicator of the overall health and functionality of the system.
 
         parameters (dict): Dictionary with model coefficients:
             - k_input_replenishment (float): Regeneration rate of State_Inputs.
@@ -38,6 +39,10 @@ class BardisModel:
             - k_complexity_decay (float): Rate at which Administrative_Complexity decays due to Systemic_Burden.
             - k_burden_accumulation (float): Rate at which capacity activity contributes to Systemic_Burden.
             - k_burden_reduction (float): Rate of Systemic_Burden reduction through relief mechanisms (e.g., reform, adaptation).
+            - k_burden_from_complexity (float): Additional burden generated from high complexity levels (quadratic effect).
+            - k_integrity_gain (float): Contribution of State_Capacity to maintaining or improving system integrity.
+            - k_integrity_loss_burden (float): How much Systemic_Burden erodes State_Integrity.
+            - k_integrity_loss_inputs (float): Penalty to integrity for insufficient State_Inputs.
 
         Returns:
         dict: Dictionary with computed flows:
@@ -49,11 +54,13 @@ class BardisModel:
             - burden_accumulation
             - burden_reduction
             - cost_of_complexity
+            - integrity_gain
+            - integrity_loss
         """
 
 
         # Unpack state variables
-        State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden = state
+        State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden, State_Integrity = state
 
         # Unpack parameters
         k_input_replenishment = parameters["k_input_replenishment"]
@@ -66,6 +73,10 @@ class BardisModel:
         k_complexity_decay = parameters["k_complexity_decay"]
         k_burden_accumulation = parameters["k_burden_accumulation"]
         k_burden_reduction = parameters["k_burden_reduction"]
+        k_integrity_gain = parameters.get("k_integrity_gain", 0.05)
+        k_integrity_loss_burden = parameters.get("k_integrity_loss_burden", 0.05)
+        k_integrity_loss_inputs = parameters.get("k_integrity_loss_inputs", 0.05)
+        k_burden_from_complexity = parameters.get("k_burden_from_complexity", 0.0)
 
         # Complexity diminishing returns boost
         complexity_effective_boost = (
@@ -75,6 +86,7 @@ class BardisModel:
 
         # Flows
         input_replenishment = k_input_replenishment * State_Inputs
+        # input_replenishment = k_input_replenishment * State_Inputs * (1 - State_Inputs)
 
         capacity_realization = ef_inputs_capacity * State_Inputs * (1 + complexity_effective_boost)
 
@@ -83,8 +95,15 @@ class BardisModel:
         complexity_growth = k_complexity_growth * State_Capacity
         complexity_decay = k_complexity_decay * Administrative_Complexity * Systemic_Burden
 
-        burden_accumulation = k_burden_accumulation * capacity_realization
+        burden_accumulation = (
+            k_burden_accumulation * capacity_realization +
+            k_burden_from_complexity * (Administrative_Complexity**2)
+        )
+
         burden_reduction = k_burden_reduction * Systemic_Burden
+
+        integrity_gain = k_integrity_gain * State_Capacity
+        integrity_loss = k_integrity_loss_burden * Systemic_Burden + k_integrity_loss_inputs * (1 - State_Inputs)
 
         # Optional: maintenance cost of complexity drains State_Inputs
         cost_of_complexity = k_cost_complexity * Administrative_Complexity
@@ -122,7 +141,9 @@ class BardisModel:
             "complexity_decay": complexity_decay,
             "burden_accumulation": burden_accumulation,
             "burden_reduction": burden_reduction,
-            "cost_of_complexity": cost_of_complexity  # pass this to derivatives
+            "cost_of_complexity": cost_of_complexity,
+            "integrity_gain": integrity_gain,
+            "integrity_loss": integrity_loss
         }
 
     def compute_derivatives(self, state, flows):
@@ -135,6 +156,7 @@ class BardisModel:
             - State_Capacity
             - Administrative_Complexity
             - Systemic_Burden
+            - State_Integrity
 
         flows (dict): Dictionary containing:
             - input_replenishment
@@ -144,13 +166,21 @@ class BardisModel:
             - complexity_decay
             - burden_accumulation
             - burden_reduction
+            - cost_of_complexity
+            - integrity_gain
+            - integrity_loss
 
         Returns:
-        list: Time derivatives [dInputs, dCapacity, dComplexity, dBurden]
+        list: Time derivatives of the stocks:
+            - dInputs: Net change in State_Inputs.
+            - dCapacity: Net change in State_Capacity.
+            - dComplexity: Net change in Administrative_Complexity.
+            - dBurden: Net change in Systemic_Burden.
+            - dIntegrity: Net change in State_Integrity.
         """
 
         # Unpack state
-        State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden = state
+        State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden, State_Integrity = state
 
         # Unpack flows
         input_replenishment = flows["input_replenishment"]
@@ -161,12 +191,17 @@ class BardisModel:
         burden_accumulation = flows["burden_accumulation"]
         burden_reduction = flows["burden_reduction"]
         cost_of_complexity = flows.get("cost_of_complexity", 0.0)
+        integrity_gain = flows["integrity_gain"]
+        integrity_loss = flows["integrity_loss"]
+
 
         # Derivatives
         dInputs = input_replenishment - capacity_realization - cost_of_complexity if State_Inputs > 0 else 0
         dCapacity = capacity_realization - capacity_drain if State_Capacity > 0 else 0
         dComplexity = complexity_growth - complexity_decay if Administrative_Complexity > 0 else 0
         dBurden = burden_accumulation - burden_reduction if Systemic_Burden > 0 else 0
+        dIntegrity = integrity_gain - integrity_loss if State_Integrity > 0 else 0
+
 
         # Optional: if debug print all derivatives
         if self.debug:
@@ -175,8 +210,9 @@ class BardisModel:
             print(f"dCapacity: {dCapacity}")
             print(f"dComplexity: {dComplexity}")
             print(f"dBurden: {dBurden}")
+            print(f"dIntegrity: {dIntegrity}")
 
-        return [dInputs, dCapacity, dComplexity, dBurden]
+        return [dInputs, dCapacity, dComplexity, dBurden, dIntegrity]
 
 
     def run_bardis_model(self, state, time,  parameters):

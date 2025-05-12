@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.integrate import odeint
 import os
-from bardis_model_v2 import BardisModel
+from model.python_ver.tainter_model import BardisModel
 
 
 # Set up paths
@@ -14,13 +14,10 @@ tableu_dir_path = os.path.join(project_dir_path, "tableau")
 # Define the dynamics model
 bm = BardisModel()
 
-# Initial conditions with order State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden
-
-# # Low-complexity / pre-collapse configuration
-# state0 = [1.0, 0.1, 0.01, 0.001] 
+# Initial conditions with order State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden, State_Integrity
 
 # # Moderate configuration
-state0 = [1.0, 0.5, 0.1, 0.05]
+state0 = [1.0, 0.5, 0.1, 0.05, 0.5]
 
 # # High-complexity / pre-collapse configuration
 # state0 = [0.8, 0.3, 0.6, 0.4]
@@ -35,17 +32,21 @@ baseline_parameters = {
     "ef_inputs_capacity": 0.05,
     "ef_complexity_support": 0.1,
     "alpha_complexity_saturation": 0.2,
-    "k_cost_complexity": 0.01,
+    "k_cost_complexity": 0.0,
     "k_capacity_drain": 0.02,
     "k_complexity_growth": 0.03,
     "k_complexity_decay": 0.01,
     "k_burden_accumulation": 0.04,
     "k_burden_reduction": 0.01,
+    "k_burden_from_complexity": 0.02,
+    "k_integrity_gain": 0.05,
+    "k_integrity_loss_burden": 0.05,
+    "k_integrity_loss_inputs": 0.05
 }
 
 
 # Time sequence (0 to 200 with step 0.01)
-t = np.arange(0, 200.01, 0.01)
+t = np.arange(0, 1000.01, 0.01)
 
 # Define RHS wrapper
 def bardis_rhs(state, time, parameters):
@@ -56,12 +57,12 @@ def bardis_rhs(state, time, parameters):
 solution = odeint(bardis_rhs, state0, t, args=(baseline_parameters,))
 
 # Convert the solution to a DataFrame
-df = pd.DataFrame(solution, columns=["State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden"])
+df = pd.DataFrame(solution, columns=["State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden", "State_Integrity"])
 df["time"] = t
-df = df[["time", "State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden"]]
+df = df[["time", "State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden", "State_Integrity"]]
 
 # Output CSV file path (update the path as needed)
-output_path =  os.path.join(tableu_dir_path, "baseline.csv")
+output_path =  os.path.join(tableu_dir_path, "baseline_1000.csv")
 df.to_csv(output_path, index=False)
 
 print(f"Simulation complete. Data written to: {output_path}")
