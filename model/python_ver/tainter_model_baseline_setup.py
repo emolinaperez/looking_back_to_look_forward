@@ -2,67 +2,53 @@ import numpy as np
 import pandas as pd
 from scipy.integrate import odeint
 import os
-from model.python_ver.tainter_model import BardisModel
+from tainter_model import TainterModel
+from utils.utils import Utils
 
 
 # Set up paths
-dir_path = os.path.dirname(os.path.realpath(__file__))
-model_dir_path = os.path.join(dir_path, "..")
-project_dir_path = os.path.join(model_dir_path, "..")
-tableu_dir_path = os.path.join(project_dir_path, "tableau")
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+MODEL_DIR_PATH = os.path.dirname(DIR_PATH)
+CONFIG_DIR_PATH = os.path.join(DIR_PATH, "config")
+OUTPUTS_DIR_PATH = os.path.join(MODEL_DIR_PATH, "outputs")
+BASELINE_DIR_PATH = os.path.join(OUTPUTS_DIR_PATH, "baseline")
 
 # Define the dynamics model
-bm = BardisModel()
+tm = TainterModel()
 
-# Initial conditions with order State_Inputs, State_Capacity, Administrative_Complexity, Systemic_Burden, State_Integrity
+# Define the Utils class for reading YAML files
+utils = Utils()
 
-# # Moderate configuration
-state0 = [1.0, 0.5, 0.1, 0.05, 0.5]
+# Load the configuration file
+config_file_name = "baseline_config_1"
+CONFIG_FILE_PATH = os.path.join(CONFIG_DIR_PATH, f"{config_file_name}.yaml")
+config = utils.read_yaml(CONFIG_FILE_PATH)
 
-# # High-complexity / pre-collapse configuration
-# state0 = [0.8, 0.3, 0.6, 0.4]
-
-# # Low-complexity / early-growth configuration
-# state0 = [1.2, 0.2, 0.05, 0.01]
-
-
-# Model parameters
-baseline_parameters = {
-    "k_input_replenishment": 0.03,
-    "ef_inputs_capacity": 0.05,
-    "ef_complexity_support": 0.1,
-    "alpha_complexity_saturation": 0.2,
-    "k_cost_complexity": 0.0,
-    "k_capacity_drain": 0.02,
-    "k_complexity_growth": 0.03,
-    "k_complexity_decay": 0.01,
-    "k_burden_accumulation": 0.04,
-    "k_burden_reduction": 0.01,
-    "k_burden_from_complexity": 0.02,
-    "k_integrity_gain": 0.05,
-    "k_integrity_loss_burden": 0.05,
-    "k_integrity_loss_inputs": 0.05
-}
+# Extract the parameters from the config file
+initial_state = config['initial_state']
+simulation_time = config['simulation_time']
+step_size = config['step_size']
+model_parameters = config['parameters']
 
 
-# Time sequence (0 to 200 with step 0.01)
-t = np.arange(0, 1000.01, 0.01)
+# Time sequence
+t = np.arange(0, simulation_time + step_size, step_size)
 
 # Define RHS wrapper
-def bardis_rhs(state, time, parameters):
-    return bm.run_bardis_model(state, time, parameters)
+def tainters_rhs(state, time, parameters):
+    return tm.run_tainters_model(state, time, parameters)
 
 
 # Solve the system of differential equations using odeint
-solution = odeint(bardis_rhs, state0, t, args=(baseline_parameters,))
+solution = odeint(tainters_rhs, initial_state, t, args=(model_parameters,))
 
 # Convert the solution to a DataFrame
 df = pd.DataFrame(solution, columns=["State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden", "State_Integrity"])
 df["time"] = t
 df = df[["time", "State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden", "State_Integrity"]]
 
-# Output CSV file path (update the path as needed)
-output_path =  os.path.join(tableu_dir_path, "baseline_1000.csv")
+# Output CSV file path
+output_path =  os.path.join(BASELINE_DIR_PATH, f"{config_file_name}_output.csv")
 df.to_csv(output_path, index=False)
 
 print(f"Simulation complete. Data written to: {output_path}")
