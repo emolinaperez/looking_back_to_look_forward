@@ -4,7 +4,7 @@ from scipy.stats import qmc
 from tainter_model import TainterModel
 import pathlib
 import logging
-import yaml
+from utils.utils import Utils
 
 # ---------------------------
 # Set up logging
@@ -31,59 +31,38 @@ tm = TainterModel()
 # ---------------------------
 # Set up file paths
 # ---------------------------
-script_dir = pathlib.Path(__file__).parent.absolute()
-config_dir = script_dir / "config"
-root = script_dir.parent.parent
-tableu_dir = root / "tableau"
-logging.info(f"Root directory: {root}")
+SCRIPT_DIR_PATH = pathlib.Path(__file__).parent.absolute()
+CONFIG_DIR_PATH = SCRIPT_DIR_PATH / "config"
+MODEL_DIR_PATH = SCRIPT_DIR_PATH.parent
+OUTPUTS_DIR_PATH = MODEL_DIR_PATH / "outputs"
+ENSEMBLE_DIR_PATH = OUTPUTS_DIR_PATH / "ensemble"
+EXP_DESIGN_DIR_PATH = OUTPUTS_DIR_PATH / "exp_design"
+logging.info(f"Model directory: {MODEL_DIR_PATH}")
 
 # ----------------------------
 # Load configuration file
 # ----------------------------
-config_file = config_dir / "config.yaml"
-with open(config_file, 'r') as file:
-    config = yaml.safe_load(file)
-logging.info(f"Configuration loaded from {config_file}")
+config_file_name = "ensemble_config_1"
+CONFIG_FILE_PATH = CONFIG_DIR_PATH / f"{config_file_name}.yaml"
+utils = Utils()
+config = utils.read_yaml(CONFIG_FILE_PATH)
+logging.info(f"Configuration loaded from {CONFIG_FILE_PATH}")
 
 # Extract the parameters from the config file
 sample_size = config['sample_size']
-time_periods = config['time_periods']
+simulation_time = config['simulation_time']
 step_size = config['step_size']
-
+initial_state = config['initial_state']
+model_parameters = config['model_parameters']
 
 logging.info(f"Sample size: {sample_size}")
-logging.info(f"Time periods: {time_periods}")
+logging.info(f"Simulation time: {simulation_time}")
 logging.info(f"Step size: {step_size}")
-# ---------------------------
-# Set up initial conditions
-# ---------------------------
-
-# Initial conditions for the state variables
-initial_state = [1.0, 0.5, 0.1, 0.05, 0.5]
-
-# Dynamic equilibrium parameter vector p_0
-p_0 = {
-    "k_input_replenishment": 0.03,
-    "ef_inputs_capacity": 0.05,
-    "ef_complexity_support": 0.1,
-    "alpha_complexity_saturation": 0.2,
-    "k_cost_complexity": 0.0,
-    "k_capacity_drain": 0.02,
-    "k_complexity_growth": 0.03,
-    "k_complexity_decay": 0.01,
-    "k_burden_accumulation": 0.04,
-    "k_burden_reduction": 0.01,
-    "k_burden_from_complexity": 0.02,
-    "k_integrity_gain": 0.05,
-    "k_integrity_loss_burden": 0.05,
-    "k_integrity_loss_inputs": 0.05
-}
+logging.info(f"Initial state: {initial_state}")
 
 # Time steps and integration method
-t = np.arange(0, time_periods + step_size, step_size)
+t = np.arange(0, simulation_time + step_size, step_size)
 
-# # Round the time sequence to 2 decimal places
-# t = np.round(t, 2)
 
 # Our integration method is "euler" (using our custom Euler integrator)
 
@@ -134,22 +113,22 @@ def run_simulation(row, initial_state, factor_names):
     """
     # Extract the multipliers in the order of the factor names
     p_x = np.array([row[col] for col in factor_names])
-    # Create a numpy array from p_0 in the same order
+    # Create a numpy array from initial_state in the same order
     p0_values = np.array([
-        p_0["k_input_replenishment"],
-        p_0["ef_inputs_capacity"],
-        p_0["ef_complexity_support"],
-        p_0["alpha_complexity_saturation"],
-        p_0["k_cost_complexity"],
-        p_0["k_capacity_drain"],
-        p_0["k_complexity_growth"],
-        p_0["k_complexity_decay"],
-        p_0["k_burden_accumulation"],
-        p_0["k_burden_reduction"],
-        p_0["k_burden_from_complexity"],
-        p_0["k_integrity_gain"],
-        p_0["k_integrity_loss_burden"],
-        p_0["k_integrity_loss_inputs"]
+        model_parameters["k_input_replenishment"],
+        model_parameters["ef_inputs_capacity"],
+        model_parameters["ef_complexity_support"],
+        model_parameters["alpha_complexity_saturation"],
+        model_parameters["k_cost_complexity"],
+        model_parameters["k_capacity_drain"],
+        model_parameters["k_complexity_growth"],
+        model_parameters["k_complexity_decay"],
+        model_parameters["k_burden_accumulation"],
+        model_parameters["k_burden_reduction"],
+        model_parameters["k_burden_from_complexity"],
+        model_parameters["k_integrity_gain"],
+        model_parameters["k_integrity_loss_burden"],
+        model_parameters["k_integrity_loss_inputs"]
     ])
     
     # Compute the new parameter vector by elementwise multiplication
@@ -196,11 +175,11 @@ def run_simulation(row, initial_state, factor_names):
 logging.info("Running simulations...")
 results = []
 for _, row in exp_df.iterrows():
-    try:
-        sim_df = run_simulation(row, initial_state, factor_names)
-        results.append(sim_df)
-    except Exception as e:
-        logging.warning(f"Simulation failed for run_id {row['run_id']}: {e}")
+    # try:
+    sim_df = run_simulation(row, initial_state, factor_names)
+    results.append(sim_df)
+    # except Exception as e:
+    #     logging.warning(f"Simulation failed for run_id {row['run_id']}: {e}")
 
 # Combine all simulation outputs
 out_all = pd.concat(results, ignore_index=True)
@@ -208,10 +187,13 @@ out_all = pd.concat(results, ignore_index=True)
 # ---------------------------
 # Write output CSV files
 # ---------------------------
-ensamble_path = tableu_dir / f"tainter_ensemble_python_ver_{sample_size}_{time_periods}.csv"
-design_path = tableu_dir / f"exp_design_python_ver_{sample_size}_{time_periods}.csv"
+ENSEMBLE_OUTPUT_PATH = ENSEMBLE_DIR_PATH / f"{config_file_name}_output.csv"
+EXP_DESIGN_OUTPUT_PATH = EXP_DESIGN_DIR_PATH / f"exp_design_{config_file_name}_output.csv"
 
-out_all.to_csv(ensamble_path, index=False)
-exp_df.to_csv(design_path, index=False)
+out_all.to_csv(ENSEMBLE_OUTPUT_PATH, index=False)
+exp_df.to_csv(EXP_DESIGN_OUTPUT_PATH, index=False)
 
-logging.info(f"Output files written to {tableu_dir}")
+logging.info(f"Output files written to {ENSEMBLE_OUTPUT_PATH} and {EXP_DESIGN_OUTPUT_PATH}")
+# ---------------------------
+# End of script
+# ---------------------------
