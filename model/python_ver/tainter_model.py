@@ -215,9 +215,9 @@ class TainterModel:
         return [dInputs, dCapacity, dComplexity, dBurden, dIntegrity]
 
 
-    def run_bardis_model(self, state, time,  parameters):
+    def run_tainters_model(self, state, time,  parameters):
         """
-        Run the Bardis model to compute the derivatives based on the given state, time, and parameters.
+        Run the Tainters model to compute the derivatives based on the given state, time, and parameters.
 
         Args:
             state (dict): The current state of the system.
