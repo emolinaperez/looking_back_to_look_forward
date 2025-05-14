@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import qmc
-from bardis_model import BardisModel
+from tainter_model import TainterModel
 import pathlib
 import logging
 import yaml
@@ -26,7 +26,7 @@ def euler_integrate(func, y0, t, parameters):
 # ---------------------------
 # Create an instance of the BardisModel class
 # ---------------------------
-bm = BardisModel()
+tm = TainterModel()
 
 # ---------------------------
 # Set up file paths
@@ -59,21 +59,24 @@ logging.info(f"Step size: {step_size}")
 # ---------------------------
 
 # Initial conditions for the state variables
-initial_state = [1.0, 0.1, 0.01, 0.001]
+initial_state = [1.0, 0.5, 0.1, 0.05, 0.5]
 
 # Dynamic equilibrium parameter vector p_0
 p_0 = {
-    'k_resources': 0.15 * 0.1 * 0.08,  # Autoregeneration rate of resources  
-    'ef_economy_resources_on_prod': 17.0 * 0.08,   # Production rate
-    'ef_bureaucracy_on_prod': 0.02 * 0.08,  # Effect of bureaucracy on production 
-    'k_deprec': 0.001 * 0.1 * 0.08,  # Depreciation rate
-    'ef_pollution_on_depreciation': 0.05 * 0.08,  # Effect of pollution on economy depreciation 
-    'k_bureaucracy': 0.01 * 0.08,  # Bureaucracy formation rate
-    'ef_economy_on_bureaucracy': 3.5 * 0.8 * 0.08,  # Effect of the Economy on bureaucracy formation
-    'k_decay_bureaucracy': 0.5 * 5 * 0.08,  # Bureaucracy decay rate
-    'ef_pollution_on_bureaucracy': 0.02 * 0.08,  # Effect of pollution on bureaucracy decay  
-    'k_pollution': 0.12 * 0.08,  # Pollution generation rate 
-    'k_pollution_decay': 0.0 * 0.08  # Pollution decay rate
+    "k_input_replenishment": 0.03,
+    "ef_inputs_capacity": 0.05,
+    "ef_complexity_support": 0.1,
+    "alpha_complexity_saturation": 0.2,
+    "k_cost_complexity": 0.0,
+    "k_capacity_drain": 0.02,
+    "k_complexity_growth": 0.03,
+    "k_complexity_decay": 0.01,
+    "k_burden_accumulation": 0.04,
+    "k_burden_reduction": 0.01,
+    "k_burden_from_complexity": 0.02,
+    "k_integrity_gain": 0.05,
+    "k_integrity_loss_burden": 0.05,
+    "k_integrity_loss_inputs": 0.05
 }
 
 # Time steps and integration method
@@ -90,17 +93,20 @@ t = np.arange(0, time_periods + step_size, step_size)
 
 # Define factor names
 factor_names = [
-    'k_resources:X', 
-    'ef_economy_resources_on_prod:X', 
-    'ef_bureaucracy_on_prod:X', 
-    'k_deprec:X',
-    'ef_pollution_on_depreciation:X',
-    'k_bureaucracy:X', 
-    'ef_economy_on_bureaucracy:X', 
-    'k_decay_bureaucracy:X', 
-    'ef_pollution_on_bureaucracy:X', 
-    'k_pollution:X',
-    'k_pollution_decay:X'
+    "k_input_replenishment",
+    "ef_inputs_capacity",
+    "ef_complexity_support",
+    "alpha_complexity_saturation",
+    "k_cost_complexity",
+    "k_capacity_drain",
+    "k_complexity_growth",
+    "k_complexity_decay",
+    "k_burden_accumulation",
+    "k_burden_reduction",
+    "k_burden_from_complexity",
+    "k_integrity_gain",
+    "k_integrity_loss_burden",
+    "k_integrity_loss_inputs"
 ]
 
 n_factors = len(factor_names)
@@ -130,17 +136,20 @@ def run_simulation(row, initial_state, factor_names):
     p_x = np.array([row[col] for col in factor_names])
     # Create a numpy array from p_0 in the same order
     p0_values = np.array([
-        p_0["k_resources"],
-        p_0["ef_economy_resources_on_prod"],
-        p_0["ef_bureaucracy_on_prod"],
-        p_0["k_deprec"],
-        p_0["ef_pollution_on_depreciation"],
-        p_0["k_bureaucracy"],
-        p_0["ef_economy_on_bureaucracy"],
-        p_0["k_decay_bureaucracy"],
-        p_0["ef_pollution_on_bureaucracy"],
-        p_0["k_pollution"],
-        p_0["k_pollution_decay"]
+        p_0["k_input_replenishment"],
+        p_0["ef_inputs_capacity"],
+        p_0["ef_complexity_support"],
+        p_0["alpha_complexity_saturation"],
+        p_0["k_cost_complexity"],
+        p_0["k_capacity_drain"],
+        p_0["k_complexity_growth"],
+        p_0["k_complexity_decay"],
+        p_0["k_burden_accumulation"],
+        p_0["k_burden_reduction"],
+        p_0["k_burden_from_complexity"],
+        p_0["k_integrity_gain"],
+        p_0["k_integrity_loss_burden"],
+        p_0["k_integrity_loss_inputs"]
     ])
     
     # Compute the new parameter vector by elementwise multiplication
@@ -148,24 +157,32 @@ def run_simulation(row, initial_state, factor_names):
     
     # Map back to a dictionary with the correct parameter names for the model
     parameters = {
-        "k_resources": new_params_values[0],
-        "ef_economy_resources_on_prod": new_params_values[1],
-        "ef_bureaucracy_on_prod": new_params_values[2],
-        "k_deprec": new_params_values[3],
-        "ef_pollution_on_depreciation": new_params_values[4],
-        "k_bureaucracy": new_params_values[5],
-        "ef_economy_on_bureaucracy": new_params_values[6],
-        "k_decay_bureaucracy": new_params_values[7],
-        "ef_pollution_on_bureaucracy": new_params_values[8],
-        "k_pollution": new_params_values[9],
-        "k_pollution_decay": new_params_values[10]
+        "k_input_replenishment": new_params_values[0],
+        "ef_inputs_capacity": new_params_values[1],
+        "ef_complexity_support": new_params_values[2],
+        "alpha_complexity_saturation": new_params_values[3],
+        "k_cost_complexity": new_params_values[4],
+        "k_capacity_drain": new_params_values[5],
+        "k_complexity_growth": new_params_values[6],
+        "k_complexity_decay": new_params_values[7],
+        "k_burden_accumulation": new_params_values[8],
+        "k_burden_reduction": new_params_values[9],
+        "k_burden_from_complexity": new_params_values[10],
+        "k_integrity_gain": new_params_values[11],
+        "k_integrity_loss_burden": new_params_values[12],
+        "k_integrity_loss_inputs": new_params_values[13]
+        
     }
 
+    # Define RHS wrapper
+    def tainter_rhs(state, time, parameters):
+        return tm.run_tainters_model(state, time, parameters)
+
     # Run the simulation using the Euler method
-    sol = euler_integrate(bm.run_bardis_model, initial_state, t, parameters)
+    sol = euler_integrate(tainter_rhs, initial_state, t, parameters)
     
     # Convert the solution to a DataFrame
-    df_sol = pd.DataFrame(sol, columns=["Resources", "Economy", "Bureaucracy", "Pollution"])
+    df_sol = pd.DataFrame(sol, columns=["State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden", "State_Integrity"])
     df_sol["time"] = t
     
     # Subset: keep every 0.2 time unit (with dt=0.01, every 20th step)
@@ -191,7 +208,7 @@ out_all = pd.concat(results, ignore_index=True)
 # ---------------------------
 # Write output CSV files
 # ---------------------------
-ensamble_path = tableu_dir / f"bardis_ensemble_python_ver_{sample_size}_{time_periods}.csv"
+ensamble_path = tableu_dir / f"tainter_ensemble_python_ver_{sample_size}_{time_periods}.csv"
 design_path = tableu_dir / f"exp_design_python_ver_{sample_size}_{time_periods}.csv"
 
 out_all.to_csv(ensamble_path, index=False)
