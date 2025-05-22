@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import qmc
-from bardis_model import BardisModel
+from tainter_model_v1 import TainterModel
 import pathlib
 import logging
-import yaml
+from utils.utils import Utils
+import os
 
 # ---------------------------
 # Set up logging
@@ -26,61 +27,48 @@ def euler_integrate(func, y0, t, parameters):
 # ---------------------------
 # Create an instance of the BardisModel class
 # ---------------------------
-bm = BardisModel()
+tm = TainterModel()
 
 # ---------------------------
 # Set up file paths
 # ---------------------------
-script_dir = pathlib.Path(__file__).parent.absolute()
-config_dir = script_dir / "config"
-root = script_dir.parent.parent
-tableu_dir = root / "tableau"
-logging.info(f"Root directory: {root}")
+SCRIPT_DIR_PATH = pathlib.Path(__file__).parent.absolute()
+CONFIG_DIR_PATH = SCRIPT_DIR_PATH / "config"
+MODEL_DIR_PATH = SCRIPT_DIR_PATH.parent
+OUTPUTS_DIR_PATH = MODEL_DIR_PATH / "outputs"
+ENSEMBLE_DIR_PATH = OUTPUTS_DIR_PATH / "ensemble"
+EXP_DESIGN_DIR_PATH = OUTPUTS_DIR_PATH / "exp_design"
+
+# Make sure ENSEMBLE AND EXP_DESIGN DIRs exist
+os.makedirs(ENSEMBLE_DIR_PATH, exist_ok=True)
+os.makedirs(EXP_DESIGN_DIR_PATH, exist_ok=True)
+
+logging.info(f"Model directory: {MODEL_DIR_PATH}")
 
 # ----------------------------
 # Load configuration file
 # ----------------------------
-config_file = config_dir / "config.yaml"
-with open(config_file, 'r') as file:
-    config = yaml.safe_load(file)
-logging.info(f"Configuration loaded from {config_file}")
+config_file_name = "ensemble_config_1"
+CONFIG_FILE_PATH = CONFIG_DIR_PATH / f"{config_file_name}.yaml"
+utils = Utils()
+config = utils.read_yaml(CONFIG_FILE_PATH)
+logging.info(f"Configuration loaded from {CONFIG_FILE_PATH}")
 
 # Extract the parameters from the config file
 sample_size = config['sample_size']
-time_periods = config['time_periods']
+simulation_time = config['simulation_time']
 step_size = config['step_size']
-
+initial_state = config['initial_state']
+model_parameters = config['model_parameters']
 
 logging.info(f"Sample size: {sample_size}")
-logging.info(f"Time periods: {time_periods}")
+logging.info(f"Simulation time: {simulation_time}")
 logging.info(f"Step size: {step_size}")
-# ---------------------------
-# Set up initial conditions
-# ---------------------------
-
-# Initial conditions for the state variables
-initial_state = [1.0, 0.1, 0.01, 0.001]
-
-# Dynamic equilibrium parameter vector p_0
-p_0 = {
-    'k_resources': 0.15 * 0.1 * 0.08,  # Autoregeneration rate of resources  
-    'ef_economy_resources_on_prod': 17.0 * 0.08,   # Production rate
-    'ef_bureaucracy_on_prod': 0.02 * 0.08,  # Effect of bureaucracy on production 
-    'k_deprec': 0.001 * 0.1 * 0.08,  # Depreciation rate
-    'ef_pollution_on_depreciation': 0.05 * 0.08,  # Effect of pollution on economy depreciation 
-    'k_bureaucracy': 0.01 * 0.08,  # Bureaucracy formation rate
-    'ef_economy_on_bureaucracy': 3.5 * 0.8 * 0.08,  # Effect of the Economy on bureaucracy formation
-    'k_decay_bureaucracy': 0.5 * 5 * 0.08,  # Bureaucracy decay rate
-    'ef_pollution_on_bureaucracy': 0.02 * 0.08,  # Effect of pollution on bureaucracy decay  
-    'k_pollution': 0.12 * 0.08,  # Pollution generation rate 
-    'k_pollution_decay': 0.0 * 0.08  # Pollution decay rate
-}
+logging.info(f"Initial state: {initial_state}")
 
 # Time steps and integration method
-t = np.arange(0, time_periods + step_size, step_size)
+t = np.arange(0, simulation_time + step_size, step_size)
 
-# # Round the time sequence to 2 decimal places
-# t = np.round(t, 2)
 
 # Our integration method is "euler" (using our custom Euler integrator)
 
@@ -90,17 +78,20 @@ t = np.arange(0, time_periods + step_size, step_size)
 
 # Define factor names
 factor_names = [
-    'k_resources:X', 
-    'ef_economy_resources_on_prod:X', 
-    'ef_bureaucracy_on_prod:X', 
-    'k_deprec:X',
-    'ef_pollution_on_depreciation:X',
-    'k_bureaucracy:X', 
-    'ef_economy_on_bureaucracy:X', 
-    'k_decay_bureaucracy:X', 
-    'ef_pollution_on_bureaucracy:X', 
-    'k_pollution:X',
-    'k_pollution_decay:X'
+    "k_input_replenishment",
+    "ef_inputs_capacity",
+    "ef_complexity_support",
+    "alpha_complexity_saturation",
+    "k_cost_complexity",
+    "k_capacity_drain",
+    "k_complexity_growth",
+    "k_complexity_decay",
+    "k_burden_accumulation",
+    "k_burden_reduction",
+    "k_burden_from_complexity",
+    "k_integrity_gain",
+    "k_integrity_loss_burden",
+    "k_integrity_loss_inputs"
 ]
 
 n_factors = len(factor_names)
@@ -128,19 +119,22 @@ def run_simulation(row, initial_state, factor_names):
     """
     # Extract the multipliers in the order of the factor names
     p_x = np.array([row[col] for col in factor_names])
-    # Create a numpy array from p_0 in the same order
+    # Create a numpy array from initial_state in the same order
     p0_values = np.array([
-        p_0["k_resources"],
-        p_0["ef_economy_resources_on_prod"],
-        p_0["ef_bureaucracy_on_prod"],
-        p_0["k_deprec"],
-        p_0["ef_pollution_on_depreciation"],
-        p_0["k_bureaucracy"],
-        p_0["ef_economy_on_bureaucracy"],
-        p_0["k_decay_bureaucracy"],
-        p_0["ef_pollution_on_bureaucracy"],
-        p_0["k_pollution"],
-        p_0["k_pollution_decay"]
+        model_parameters["k_input_replenishment"],
+        model_parameters["ef_inputs_capacity"],
+        model_parameters["ef_complexity_support"],
+        model_parameters["alpha_complexity_saturation"],
+        model_parameters["k_cost_complexity"],
+        model_parameters["k_capacity_drain"],
+        model_parameters["k_complexity_growth"],
+        model_parameters["k_complexity_decay"],
+        model_parameters["k_burden_accumulation"],
+        model_parameters["k_burden_reduction"],
+        model_parameters["k_burden_from_complexity"],
+        model_parameters["k_integrity_gain"],
+        model_parameters["k_integrity_loss_burden"],
+        model_parameters["k_integrity_loss_inputs"]
     ])
     
     # Compute the new parameter vector by elementwise multiplication
@@ -148,24 +142,32 @@ def run_simulation(row, initial_state, factor_names):
     
     # Map back to a dictionary with the correct parameter names for the model
     parameters = {
-        "k_resources": new_params_values[0],
-        "ef_economy_resources_on_prod": new_params_values[1],
-        "ef_bureaucracy_on_prod": new_params_values[2],
-        "k_deprec": new_params_values[3],
-        "ef_pollution_on_depreciation": new_params_values[4],
-        "k_bureaucracy": new_params_values[5],
-        "ef_economy_on_bureaucracy": new_params_values[6],
-        "k_decay_bureaucracy": new_params_values[7],
-        "ef_pollution_on_bureaucracy": new_params_values[8],
-        "k_pollution": new_params_values[9],
-        "k_pollution_decay": new_params_values[10]
+        "k_input_replenishment": new_params_values[0],
+        "ef_inputs_capacity": new_params_values[1],
+        "ef_complexity_support": new_params_values[2],
+        "alpha_complexity_saturation": new_params_values[3],
+        "k_cost_complexity": new_params_values[4],
+        "k_capacity_drain": new_params_values[5],
+        "k_complexity_growth": new_params_values[6],
+        "k_complexity_decay": new_params_values[7],
+        "k_burden_accumulation": new_params_values[8],
+        "k_burden_reduction": new_params_values[9],
+        "k_burden_from_complexity": new_params_values[10],
+        "k_integrity_gain": new_params_values[11],
+        "k_integrity_loss_burden": new_params_values[12],
+        "k_integrity_loss_inputs": new_params_values[13]
+        
     }
 
+    # Define RHS wrapper
+    def tainter_rhs(state, time, parameters):
+        return tm.run_tainters_model(state, time, parameters)
+
     # Run the simulation using the Euler method
-    sol = euler_integrate(bm.run_bardis_model, initial_state, t, parameters)
+    sol = euler_integrate(tainter_rhs, initial_state, t, parameters)
     
     # Convert the solution to a DataFrame
-    df_sol = pd.DataFrame(sol, columns=["Resources", "Economy", "Bureaucracy", "Pollution"])
+    df_sol = pd.DataFrame(sol, columns=["State_Inputs", "State_Capacity", "Administrative_Complexity", "Systemic_Burden", "State_Integrity"])
     df_sol["time"] = t
     
     # Subset: keep every 0.2 time unit (with dt=0.01, every 20th step)
@@ -179,11 +181,11 @@ def run_simulation(row, initial_state, factor_names):
 logging.info("Running simulations...")
 results = []
 for _, row in exp_df.iterrows():
-    try:
-        sim_df = run_simulation(row, initial_state, factor_names)
-        results.append(sim_df)
-    except Exception as e:
-        logging.warning(f"Simulation failed for run_id {row['run_id']}: {e}")
+    # try:
+    sim_df = run_simulation(row, initial_state, factor_names)
+    results.append(sim_df)
+    # except Exception as e:
+    #     logging.warning(f"Simulation failed for run_id {row['run_id']}: {e}")
 
 # Combine all simulation outputs
 out_all = pd.concat(results, ignore_index=True)
@@ -191,10 +193,13 @@ out_all = pd.concat(results, ignore_index=True)
 # ---------------------------
 # Write output CSV files
 # ---------------------------
-ensamble_path = tableu_dir / f"bardis_ensemble_python_ver_{sample_size}_{time_periods}.csv"
-design_path = tableu_dir / f"exp_design_python_ver_{sample_size}_{time_periods}.csv"
+ENSEMBLE_OUTPUT_PATH = ENSEMBLE_DIR_PATH / f"{config_file_name}_output.csv"
+EXP_DESIGN_OUTPUT_PATH = EXP_DESIGN_DIR_PATH / f"exp_design_{config_file_name}_output.csv"
 
-out_all.to_csv(ensamble_path, index=False)
-exp_df.to_csv(design_path, index=False)
+out_all.to_csv(ENSEMBLE_OUTPUT_PATH, index=False)
+exp_df.to_csv(EXP_DESIGN_OUTPUT_PATH, index=False)
 
-logging.info(f"Output files written to {tableu_dir}")
+logging.info(f"Output files written to {ENSEMBLE_OUTPUT_PATH} and {EXP_DESIGN_OUTPUT_PATH}")
+# ---------------------------
+# End of script
+# ---------------------------

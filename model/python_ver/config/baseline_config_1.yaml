@@ -1,0 +1,18 @@
+initial_state: [1.0, 0.5, 0.1, 0.05, 0.5]
+simulation_time: 200
+step_size: 0.01
+model_parameters:
+  k_input_replenishment: 0.03
+  ef_inputs_capacity: 0.05
+  ef_complexity_support: 0.1
+  alpha_complexity_saturation: 0.2
+  k_cost_complexity: 0.0
+  k_capacity_drain: 0.02
+  k_complexity_growth: 0.03
+  k_complexity_decay: 0.01
+  k_burden_accumulation: 0.04
+  k_burden_reduction: 0.01
+  k_burden_from_complexity: 0.02
+  k_integrity_gain: 0.05
+  k_integrity_loss_burden: 0.05
+  k_integrity_loss_inputs: 0.05

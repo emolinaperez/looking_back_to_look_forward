@@ -161,6 +161,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# results analysis dir
-results_analysis/processed_data
-tableau/
+model/outputs/baseline
+model/outputs/ensemble
+model/outputs/exp_design
