@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import qmc
-from tainter_model import TainterModel
+from tainter_model_v1 import TainterModel
 import pathlib
 import logging
 from utils.utils import Utils
