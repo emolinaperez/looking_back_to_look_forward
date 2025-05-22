@@ -5,6 +5,7 @@ from tainter_model_v1 import TainterModel
 import pathlib
 import logging
 from utils.utils import Utils
+import os
 
 # ---------------------------
 # Set up logging
@@ -37,6 +38,11 @@ MODEL_DIR_PATH = SCRIPT_DIR_PATH.parent
 OUTPUTS_DIR_PATH = MODEL_DIR_PATH / "outputs"
 ENSEMBLE_DIR_PATH = OUTPUTS_DIR_PATH / "ensemble"
 EXP_DESIGN_DIR_PATH = OUTPUTS_DIR_PATH / "exp_design"
+
+# Make sure ENSEMBLE AND EXP_DESIGN DIRs exist
+os.makedirs(ENSEMBLE_DIR_PATH, exist_ok=True)
+os.makedirs(EXP_DESIGN_DIR_PATH, exist_ok=True)
+
 logging.info(f"Model directory: {MODEL_DIR_PATH}")
 
 # ----------------------------

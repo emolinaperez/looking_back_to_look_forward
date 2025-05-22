@@ -13,6 +13,10 @@ CONFIG_DIR_PATH = os.path.join(DIR_PATH, "config")
 OUTPUTS_DIR_PATH = os.path.join(MODEL_DIR_PATH, "outputs")
 BASELINE_DIR_PATH = os.path.join(OUTPUTS_DIR_PATH, "baseline")
 
+# Make sure OUTPUTS and BASELINE DIRs exist
+os.makedirs(OUTPUTS_DIR_PATH, exist_ok=True)
+os.makedirs(BASELINE_DIR_PATH, exist_ok=True)
+
 # Define the dynamics model
 tm = TainterModel()
 
