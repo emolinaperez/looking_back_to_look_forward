@@ -2,7 +2,7 @@ sample_size: 100
 initial_state: 
   # [State_Inputs, State_Capacity, Administrative_Complexity]
   [1.0, 0.5, 0.05]
-simulation_time: 500
+simulation_time: 1000
 step_size: 0.01
 
 model_parameters:
