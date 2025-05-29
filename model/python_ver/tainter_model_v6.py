@@ -21,6 +21,8 @@ class TainterModel:
         k_SC_decay   = params["k_SC_decay"]    # capacity decay rate
         k_AC_growth  = params["k_AC_growth"]   # capacity→bureaucracy growth
         k_AC_decay   = params["k_AC_decay"]    # bureaucracy decay rate
+        k_coll_SI    = params.get("k_coll_SI", 0.0)
+        k_coll_SC    = params.get("k_coll_SC", 0.0)
 
         # — Diminishing returns from AC on inputs —
         breach     = max(0.0, AC - SC)
@@ -28,11 +30,11 @@ class TainterModel:
 
         # — State Inputs flows —
         si_in  = k_SI + ac_boost
-        si_out = k_use * SI
+        si_out = k_use * SI + k_coll_SI * breach
 
         # — State Capacity flows —
         cap_real  = eps_SI_SC * SI
-        cap_decay = k_SC_decay * SC
+        cap_decay = k_SC_decay * SC + k_coll_SC * breach
 
         # — Administrative Complexity flows —
         ac_grow = k_AC_growth * SC
@@ -53,9 +55,9 @@ class TainterModel:
     def compute_derivatives(self, state, flows):
         SI, SC, AC = state
 
-        dSI = max(0.0, flows["si_in"]  - flows["si_out"]) if SI > 0 else 0.0
-        dSC = max(0.0, flows["cap_real"] - flows["cap_decay"]) if SC > 0 else 0.0
-        dAC = max(0.0, flows["ac_grow"] - flows["ac_dec"]) if AC > 0 else 0.0
+        dSI = flows["si_in"]  - flows["si_out"] if SI > 0 else 0.0
+        dSC = flows["cap_real"] - flows["cap_decay"] if SC > 0 else 0.0
+        dAC = flows["ac_grow"] - flows["ac_dec"] if AC > 0 else 0.0
 
         if self.debug:
             print(f"Derivs| dSI={dSI:.3f} dSC={dSC:.3f} dAC={dAC:.3f}")
