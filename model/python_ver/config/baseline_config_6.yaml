@@ -1,0 +1,41 @@
+initial_state: 
+  # [State_Inputs, State_Capacity, Administrative_Complexity]
+  [1.0, 0.5, 0.05]
+
+simulation_time: 1000
+step_size: 0.01
+
+model_parameters:
+  # State Inputs
+  k_SI:         0.03    # baseline input replenishment
+  ef_AC:        0.005   # per-unit administrative complexity boost to inputs
+  alpha_sat:    0.20    # saturation parameter for diminishing returns
+  k_use:        0.02    # inputs consumption rate
+  k_coll_SI:   0.02
+
+  # State Capacity
+  eps_SI_SC:    0.05    # efficiency of converting inputs → capacity
+  k_SC_decay:   0.02    # capacity decay rate
+  k_coll_SC:   0.05
+
+  # Administrative Complexity
+  k_AC_growth:  0.03    # capacity → complexity growth
+  k_AC_decay:   0.01    # complexity decay rate
+
+
+# model_parameters:
+#   # State Inputs
+#   k_SI:         0.85    # baseline input replenishment
+#   ef_AC:        0.46   # per-unit administrative complexity boost to inputs
+#   alpha_sat:    0.56    # saturation parameter for diminishing returns
+#   k_use:        0.50    # inputs consumption rate
+#   k_coll_SI:   0.85
+
+#   # State Capacity
+#   eps_SI_SC:    0.06    # efficiency of converting inputs → capacity
+#   k_SC_decay:   0.48    # capacity decay rate
+#   k_coll_SC:   0.93
+
+#   # Administrative Complexity
+#   k_AC_growth:  0.74    # capacity → complexity growth
+#   k_AC_decay:   0.22    # complexity decay rate
