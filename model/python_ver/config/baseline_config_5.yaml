@@ -1,0 +1,39 @@
+initial_state: 
+  # [Natural_Resources, State_Inputs, State_Capacity, Bureaucracy, Complexity, Population]
+  [1.0, 1.0, 0.1, 0.05, 0.1, 0.1]
+
+simulation_time: 500
+step_size: 0.01
+
+model_parameters:
+  # Natural Resources
+  k_NR_regen:   0.01    # regen rate
+  k_NR_ext:     0.02    # extraction per SI
+
+  # State Inputs
+  k_SI:         0.03    # conversion to inputs
+  c_econ:       0.01    # per-capita econ activity
+  c_bur:        0.005   # per-capita bureaucracy effect
+  k_use:        0.02    # inputs consumption rate
+
+  # State Capacity
+  eps_SI_SC:    0.05    # inputs → capacity
+  k_SC_decay:   0.02    # capacity decay
+
+  # Bureaucracy
+  k_B_growth:   0.03    # capacity → bureaucracy
+  k_B_decay:    0.01    # bureaucracy decay
+
+  # Complexity
+  k_C_pop:      0.005   # pop → complexity
+  k_C_time:     0.001   # background complexity growth
+  k_C_decay:    0.01    # complexity decay
+
+  # Population (logistic)
+  r_pop:        0.02    # intrinsic growth rate
+  K_pop:        1.0     # carrying capacity
+
+  # Collapse coefficients (when C > SC)
+  k_coll_P:     0.05    # pop loss per unit breach
+  k_coll_SC:    0.01    # capacity loss per unit breach
+  k_coll_SI:    0.01    # inputs loss per unit breach
