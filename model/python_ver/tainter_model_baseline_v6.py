@@ -19,7 +19,7 @@ os.makedirs(BASELINE_DIR_PATH, exist_ok=True)
 
 
 # Define the dynamics model
-tm = TainterModel(debug=True)
+tm = TainterModel(debug=False)
 
 # Define the Utils class for reading YAML files
 utils = Utils()
