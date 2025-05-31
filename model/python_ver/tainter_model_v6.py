@@ -21,8 +21,8 @@ class TainterModel:
         k_SC_decay   = params["k_SC_decay"]    # capacity decay rate
         k_AC_growth  = params["k_AC_growth"]   # capacity→bureaucracy growth
         k_AC_decay   = params["k_AC_decay"]    # bureaucracy decay rate
-        k_coll_SI    = params.get("k_coll_SI", 0.0)
-        k_coll_SC    = params.get("k_coll_SC", 0.0)
+        k_coll_SI    = params.get("k_coll_SI", 0.0) # extra SI drain per unit breach
+        k_coll_SC    = params.get("k_coll_SC", 0.0)  # extra SC decay per unit breach
 
         # — Diminishing returns from AC on inputs —
         breach     = max(0.0, AC - SC)
@@ -55,12 +55,25 @@ class TainterModel:
     def compute_derivatives(self, state, flows):
         SI, SC, AC = state
 
-        dSI = flows["si_in"]  - flows["si_out"] if SI > 0 else 0.0
-        dSC = flows["cap_real"] - flows["cap_decay"] if SC > 0 else 0.0
-        dAC = flows["ac_grow"] - flows["ac_dec"] if AC > 0 else 0.0
+        # raw flows
+        dSI_raw = flows["si_in"]   - flows["si_out"]
+        dSC_raw = flows["cap_real"] - flows["cap_decay"]
+        dAC_raw = flows["ac_grow"]  - flows["ac_dec"]
+
+        # helper: if stock <= 0, forbid negative drift; otherwise leave drift alone
+        def clamp_neg(stock, d):
+            if stock <= 0 and d < 0:
+                return 0.0
+            return d
+
+        dSI = clamp_neg(SI, dSI_raw)
+        dSC = clamp_neg(SC, dSC_raw)
+        dAC = clamp_neg(AC, dAC_raw)
 
         if self.debug:
-            print(f"Derivs| dSI={dSI:.3f} dSC={dSC:.3f} dAC={dAC:.3f}")
+            print(f"Derivs | raw SI {dSI_raw:.3f} → clamped {dSI:.3f},"
+                  f" raw SC {dSC_raw:.3f} → {dSC:.3f},"
+                  f" raw AC {dAC_raw:.3f} → {dAC:.3f}")
 
         return [dSI, dSC, dAC]
 

@@ -164,3 +164,4 @@ cython_debug/
 model/outputs/baseline
 model/outputs/ensemble
 model/outputs/exp_design
+model/outputs/single_sim

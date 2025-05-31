@@ -76,16 +76,17 @@ t = np.arange(0, simulation_time + step_size, step_size)
 # Create experimental design using Latin Hypercube Sampling
 # ---------------------------
 
-# Define factor names
-factor_names = list(model_parameters.keys())
+# Define parameter names and factor names
+parameter_names = list(model_parameters.keys())
+factor_names = [f"{name}_X" for name in parameter_names]
 
+# Number of factors
 n_factors = len(factor_names)
 
 # Generate LHS in [0,1] and then scale to [0.5, 1.5]
 sampler = qmc.LatinHypercube(d=n_factors, seed=55555)
 sample = sampler.random(n=sample_size)
-# scaled_sample = 0.5 + sample * (1.5 - 0.5)
-scaled_sample = sample * (1.5 - 0.5)
+scaled_sample = 0.5 + sample
 exp_df = pd.DataFrame(scaled_sample, columns=factor_names)
 exp_df['run_id'] = np.arange(1, sample_size + 1)
 
@@ -97,14 +98,13 @@ def run_simulation(row, initial_state, factor_names):
     # Extract the multipliers in the order of the factor names
     p_x = np.array([row[col] for col in factor_names])
     # Create a numpy array from initial_state in the order of factor_names
-    p0_values = np.array([model_parameters[name] for name in factor_names])
+    p0_values = np.array([model_parameters[name] for name in parameter_names])
     
     # Compute the new parameter vector by elementwise multiplication
     new_params_values = p0_values * p_x
     
     # Map back to a dictionary with the correct parameter names for the model
-    # Map back to a dictionary with the correct parameter names for the model
-    parameters = {name: value for name, value in zip(factor_names, new_params_values)}
+    parameters = {name: value for name, value in zip(parameter_names, new_params_values)}
 
     # Define RHS wrapper
     def tainter_rhs(state, time, parameters):
